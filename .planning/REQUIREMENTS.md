@@ -69,31 +69,31 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUD-01 | - | Pending |
-| AUD-02 | - | Pending |
-| AUD-03 | - | Pending |
-| AUD-04 | - | Pending |
-| VOC-01 | - | Pending |
-| VOC-02 | - | Pending |
-| VOC-03 | - | Pending |
-| VOC-04 | - | Pending |
-| VOC-05 | - | Pending |
-| VOC-06 | - | Pending |
-| WRK-01 | - | Pending |
-| WRK-02 | - | Pending |
-| WRK-03 | - | Pending |
-| WRK-04 | - | Pending |
-| WRK-05 | - | Pending |
-| UI-01 | - | Pending |
-| UI-02 | - | Pending |
-| UI-03 | - | Pending |
-| UI-04 | - | Pending |
+| AUD-01 | Phase 1 | Pending |
+| AUD-02 | Phase 1 | Pending |
+| AUD-03 | Phase 1 | Pending |
+| AUD-04 | Phase 1 | Pending |
+| VOC-01 | Phase 3 | Pending |
+| VOC-02 | Phase 3 | Pending |
+| VOC-03 | Phase 3 | Pending |
+| VOC-04 | Phase 3 | Pending |
+| VOC-05 | Phase 3 | Pending |
+| VOC-06 | Phase 3 | Pending |
+| WRK-01 | Phase 4 | Pending |
+| WRK-02 | Phase 4 | Pending |
+| WRK-03 | Phase 4 | Pending |
+| WRK-04 | Phase 4 | Pending |
+| WRK-05 | Phase 4 | Pending |
+| UI-01 | Phase 3 | Pending |
+| UI-02 | Phase 3 | Pending |
+| UI-03 | Phase 3 | Pending |
+| UI-04 | Phase 2 | Pending |
 
 **Coverage:**
 - v1 requirements: 19 total
-- Mapped to phases: 0
-- Unmapped: 19
+- Mapped to phases: 19
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-01*
-*Last updated: 2026-04-01 after initial definition*
+*Last updated: 2026-04-01 after roadmap creation*
