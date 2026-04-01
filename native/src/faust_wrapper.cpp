@@ -1,9 +1,174 @@
-// faust_wrapper.cpp — stub for CMake configuration
-// Full implementation: Plan 02
-// Bridges Faust-generated C++ DSP classes to the C voice pool
+// faust_wrapper.cpp — C++ implementation wrapping Faust-generated DSP classes.
+//
+// The generated DSP files (sine_dsp.cpp, etc.) are NOT compiled as independent
+// translation units. They are #included here, after the Faust base class headers,
+// because they depend on `dsp`, `UI`, and `Meta` base classes from faust/dsp/dsp.h.
+//
+// All public functions are extern "C" (declared in faust_wrapper.h).
 
-// TODO: Plan 02 implements:
-// - FaustDSP struct wrapping generated DSP class instances
-// - Per-waveform type instantiation
-// - set_param / getParamValue wrappers
-// - DSP pool management for crossfade (64 instances: 32 active + 32 pending)
+#include <cstring>
+#include <cstdio>
+
+// Faust base class headers — must come before the generated DSP includes.
+#include "faust/dsp/dsp.h"
+#include "faust/gui/meta.h"
+#include "faust/gui/UI.h"
+#include "faust/gui/MapUI.h"
+
+// Generated DSP classes — included as headers, not compiled independently.
+// Each defines a unique class (SineDSP, TriangleDSP, ...) with header guards.
+#include "sine_dsp.cpp"
+#include "triangle_dsp.cpp"
+#include "saw_dsp.cpp"
+#include "square_dsp.cpp"
+#include "pulse_dsp.cpp"
+#include "noise_dsp.cpp"
+#include "fm_dsp.cpp"
+
+#include "faust_wrapper.h"
+
+// ---------------------------------------------------------------------------
+// DSP pool configuration
+// ---------------------------------------------------------------------------
+
+#define POOL_PER_TYPE 10   // 10 instances per waveform type = 70 total
+
+// The opaque FaustDSP struct (forward-declared in voice_slot.h).
+struct FaustDSP {
+    dsp*         instance;   // Faust-generated DSP subclass
+    MapUI        ui;         // parameter name -> zone mapping (built at init)
+    WaveformType type;
+    bool         in_use;     // pool management flag (audio-thread only after init)
+};
+
+static FaustDSP g_pool[NUM_WAVEFORM_TYPES][POOL_PER_TYPE];
+static int      g_sample_rate = 0;
+static bool     g_initialized = false;
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+static dsp* create_dsp_instance(WaveformType type) {
+    switch (type) {
+        case WAVEFORM_SINE:     return new SineDSP();
+        case WAVEFORM_TRIANGLE: return new TriangleDSP();
+        case WAVEFORM_SAW:      return new SawDSP();
+        case WAVEFORM_SQUARE:   return new SquareDSP();
+        case WAVEFORM_PULSE:    return new PulseDSP();
+        case WAVEFORM_NOISE:    return new NoiseDSP();
+        case WAVEFORM_FM:       return new FmDSP();
+        default:
+            return nullptr;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+extern "C" {
+
+int faust_wrapper_init(int sample_rate) {
+    if (g_initialized) return 0;  // idempotent
+
+    g_sample_rate = sample_rate;
+
+    for (int t = 0; t < NUM_WAVEFORM_TYPES; t++) {
+        for (int s = 0; s < POOL_PER_TYPE; s++) {
+            FaustDSP* slot = &g_pool[t][s];
+
+            slot->type   = static_cast<WaveformType>(t);
+            slot->in_use = false;
+
+            slot->instance = create_dsp_instance(static_cast<WaveformType>(t));
+            if (!slot->instance) {
+                fprintf(stderr, "faust_wrapper_init: failed to create DSP instance type=%d slot=%d\n", t, s);
+                return -1;
+            }
+
+            slot->instance->init(sample_rate);
+            slot->instance->buildUserInterface(&slot->ui);
+        }
+    }
+
+    g_initialized = true;
+    return 0;
+}
+
+void faust_wrapper_shutdown(void) {
+    if (!g_initialized) return;
+
+    for (int t = 0; t < NUM_WAVEFORM_TYPES; t++) {
+        for (int s = 0; s < POOL_PER_TYPE; s++) {
+            delete g_pool[t][s].instance;
+            g_pool[t][s].instance = nullptr;
+            g_pool[t][s].in_use   = false;
+        }
+    }
+
+    g_initialized  = false;
+    g_sample_rate  = 0;
+}
+
+FaustDSP* faust_wrapper_acquire(WaveformType type) {
+    if (!g_initialized || (int)type >= NUM_WAVEFORM_TYPES) return nullptr;
+
+    for (int s = 0; s < POOL_PER_TYPE; s++) {
+        FaustDSP* slot = &g_pool[(int)type][s];
+        if (!slot->in_use) {
+            // Reset DSP state without reallocation so previous voice's buffer
+            // state doesn't bleed into the new voice.
+            slot->instance->instanceClear();
+            slot->in_use = true;
+            return slot;
+        }
+    }
+
+    fprintf(stderr, "faust_wrapper_acquire: pool exhausted for type=%d\n", (int)type);
+    return nullptr;
+}
+
+void faust_wrapper_release(FaustDSP* dsp) {
+    if (!dsp) return;
+    dsp->in_use = false;
+    // Instance stays allocated in the pool — zero allocation on audio thread.
+}
+
+void faust_wrapper_compute(FaustDSP* dsp, int frame_count, float* output) {
+    if (!dsp || !dsp->instance || !output) return;
+
+    // Faust compute signature: compute(count, float** inputs, float** outputs)
+    // These DSP programs have 0 audio inputs (oscillators/noise generators).
+    float* outputs[1] = { output };
+    dsp->instance->compute(frame_count, nullptr, outputs);
+}
+
+void faust_wrapper_set_param(FaustDSP* dsp, const char* param_name, float value) {
+    if (!dsp || !param_name) return;
+    // MapUI stores params with full Faust path (e.g. "/sine/freq").
+    // Try the zone pointer directly via getParamZone for suffix match.
+    int n = dsp->ui.getParamsCount();
+    size_t name_len = strlen(param_name);
+    for (int i = 0; i < n; i++) {
+        const char* path = dsp->ui.getParamAddress1(i);
+        size_t path_len = strlen(path);
+        if (path_len >= name_len) {
+            // Check if path ends with "/<param_name>" or equals param_name
+            if ((path_len == name_len && strcmp(path, param_name) == 0) ||
+                (path_len > name_len &&
+                 path[path_len - name_len - 1] == '/' &&
+                 strcmp(path + path_len - name_len, param_name) == 0)) {
+                FAUSTFLOAT* zone = dsp->ui.getParamZone(i);
+                if (zone) *zone = value;
+                return;
+            }
+        }
+    }
+}
+
+int faust_wrapper_get_sample_rate(void) {
+    return g_sample_rate;
+}
+
+} // extern "C"

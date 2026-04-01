@@ -1,6 +1,16 @@
 #pragma once
+
+#ifdef __cplusplus
+#include <atomic>
+#include <stdbool.h>
+// In C++ TUs, declare the VoiceState atomic field using std::atomic<int>
+// The C11 _Atomic keyword is not valid C++; we use a conditional typedef.
+typedef std::atomic<int> voice_state_atomic_t;
+#else
 #include <stdatomic.h>
 #include <stdbool.h>
+typedef _Atomic int voice_state_atomic_t;
+#endif
 
 #define MAX_VOICES         32
 #define MAX_BUFFER_SIZE    4096
@@ -16,7 +26,7 @@ typedef enum {
 } VoiceState;
 
 typedef struct {
-    _Atomic int     state;          // VoiceState
+    voice_state_atomic_t state;     // VoiceState
     FaustDSP*       dsp;            // current DSP instance
     FaustDSP*       dsp_pending;    // non-null during 20ms crossfade (per D-02)
     float           frequency;

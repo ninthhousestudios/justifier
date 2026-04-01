@@ -64,10 +64,16 @@ endforeach()
 # Library target
 # ---------------------------------------------------------------------------
 add_library(justifier_audio STATIC
-    src/audio_engine.c
+    src/audio_engine.cpp
     src/faust_wrapper.cpp
-    ${GENERATED_DSP_SOURCES}
 )
+
+# Generated DSP files are #included directly by faust_wrapper.cpp, not compiled
+# as independent TUs. They depend on Faust base class headers (dsp::dsp, UI, Meta)
+# which faust_wrapper.cpp includes first. We still register the custom_commands so
+# the files are generated before the build, using a custom target as a dependency.
+add_custom_target(generate_faust_dsp DEPENDS ${GENERATED_DSP_SOURCES})
+add_dependencies(justifier_audio generate_faust_dsp)
 
 target_include_directories(justifier_audio PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
