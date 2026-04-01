@@ -1,0 +1,14 @@
+import("stdfaust.lib");
+freq = nentry("freq", 440.0, 20.0, 20000.0, 0.01) : si.smoo;
+amp = nentry("amp", 0.0, 0.0, 1.0, 0.001) : si.smoo;
+gate = nentry("gate", 0, 0, 1, 1);
+attack = nentry("attack", 0.05, 0.001, 1.0, 0.001);
+release = nentry("release", 10.0, 0.01, 30.0, 0.01);
+detune = nentry("detune", 0.0, -100.0, 100.0, 0.01);
+mod_ratio = nentry("mod_ratio", 1.0, 0.0, 20.0, 0.01) : si.smoo;
+mod_index = nentry("mod_index", 0.0, 0.0, 25.0, 0.01) : si.smoo;
+effective_freq = freq * 2.0^(detune / 1200.0);
+modulator = os.osc(effective_freq * mod_ratio) * mod_index * effective_freq;
+carrier = os.osc(effective_freq + modulator);
+envelope = en.are(attack, release, gate);
+process = carrier * amp * envelope;

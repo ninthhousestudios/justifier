@@ -1,0 +1,65 @@
+#pragma once
+#include <stdatomic.h>
+#include <stdbool.h>
+
+#define MAX_VOICES         32
+#define MAX_BUFFER_SIZE    4096
+#define NUM_WAVEFORM_TYPES 7
+
+// Forward declaration — actual type defined in faust_wrapper.cpp
+typedef struct FaustDSP FaustDSP;
+
+typedef enum {
+    VOICE_FREE     = 0,
+    VOICE_ACTIVE   = 1,
+    VOICE_FADING   = 2,  // crossfade in progress
+} VoiceState;
+
+typedef struct {
+    _Atomic int     state;          // VoiceState
+    FaustDSP*       dsp;            // current DSP instance
+    FaustDSP*       dsp_pending;    // non-null during 20ms crossfade (per D-02)
+    float           frequency;
+    float           amplitude;
+    float           pan;            // -1.0 to 1.0 (per D-05)
+    float           detune_cents;   // cents offset (per D-05)
+    int             waveform_type;  // WaveformType enum value
+    float           crossfade_gain; // 0.0 to 1.0 during crossfade
+    int             crossfade_samples_remaining; // 960 at 48kHz for 20ms (per D-02)
+    float           attack_time;    // seconds (default 0.05)
+    float           release_time;   // seconds (default 10.0)
+} VoiceSlot;
+
+// Control message types for SPSC queue (per D-08)
+typedef enum {
+    MSG_VOICE_ADD,
+    MSG_VOICE_REMOVE,
+    MSG_SET_FREQUENCY,
+    MSG_SET_AMPLITUDE,
+    MSG_SET_PAN,
+    MSG_SET_DETUNE,
+    MSG_SET_WAVEFORM,
+    MSG_SET_GATE,
+    MSG_SET_GATE_TIMES,
+    MSG_SET_MOD_RATIO,
+    MSG_SET_MOD_INDEX,
+    MSG_SET_MASTER_VOLUME,
+} ControlMessageType;
+
+typedef struct {
+    ControlMessageType type;
+    int                voice_id;
+    union {
+        float          float_value;
+        int            int_value;
+        struct {
+            int        waveform_type;
+            float      frequency;
+            float      amplitude;
+        } voice_add;
+        struct {
+            float      attack_s;
+            float      release_s;
+        } gate_times;
+    };
+} ControlMessage;
