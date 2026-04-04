@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../providers/engine-provider.dart';
-import '../theme/app-theme.dart';
+import '../providers/engine_provider.dart';
+import '../theme/app_theme.dart';
 
 /// Displays engine running status and active voice count.
 /// Polls the engine atomics every 500ms.

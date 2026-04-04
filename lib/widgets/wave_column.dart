@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../audio/waveform_type.dart';
-import '../models/workspace-state.dart';
-import '../providers/workspace-provider.dart';
-import '../theme/app-theme.dart';
-import 'voice-card.dart';
+import '../models/workspace_state.dart';
+import '../providers/workspace_provider.dart';
+import '../theme/app_theme.dart';
+import 'voice_card.dart';
 
 /// A vertical column representing a Wave and its voices.
 class WaveColumn extends ConsumerWidget {

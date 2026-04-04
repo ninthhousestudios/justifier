@@ -4,8 +4,8 @@ import 'package:uuid/uuid.dart';
 
 import '../audio/audio_engine.dart';
 import '../audio/waveform_type.dart';
-import '../models/workspace-state.dart';
-import 'engine-provider.dart';
+import '../models/workspace_state.dart';
+import 'engine_provider.dart';
 
 const _uuid = Uuid();
 

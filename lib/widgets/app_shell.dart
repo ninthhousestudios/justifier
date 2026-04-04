@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../models/workspace-state.dart';
-import '../providers/workspace-provider.dart';
-import '../providers/zoom-provider.dart';
-import '../theme/app-theme.dart';
-import 'connection-status-badge.dart';
-import 'wave-column.dart';
+import '../models/workspace_state.dart';
+import '../providers/workspace_provider.dart';
+import '../providers/zoom_provider.dart';
+import '../theme/app_theme.dart';
+import 'connection_status_badge.dart';
+import 'wave_column.dart';
 
 /// Top-level app layout: workspace area + right console panel.
 class AppShell extends ConsumerWidget {

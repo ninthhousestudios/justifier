@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../theme/app-theme.dart';
+import '../theme/app_theme.dart';
 
 /// Two integer fields with "/" separator for JI ratio entry,
 /// each with +/- nudge buttons.

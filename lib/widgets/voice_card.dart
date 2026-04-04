@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../audio/waveform_type.dart';
-import '../models/workspace-state.dart';
-import '../providers/workspace-provider.dart';
-import '../theme/app-theme.dart';
-import 'ratio-input.dart';
-import 'waveform-selector.dart';
+import '../models/workspace_state.dart';
+import '../providers/workspace_provider.dart';
+import '../theme/app_theme.dart';
+import 'ratio_input.dart';
+import 'waveform_selector.dart';
 
 /// Compact card displaying all controls for a single voice.
 class VoiceCard extends ConsumerWidget {

@@ -5,9 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'core/persistence.dart';
-import 'providers/zoom-provider.dart';
-import 'theme/app-theme.dart';
-import 'widgets/app-shell.dart';
+import 'providers/zoom_provider.dart';
+import 'theme/app_theme.dart';
+import 'widgets/app_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

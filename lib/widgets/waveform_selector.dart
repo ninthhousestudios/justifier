@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../audio/waveform_type.dart';
-import '../theme/app-theme.dart';
+import '../theme/app_theme.dart';
 
 /// Compact row of waveform type chips.
 class WaveformSelector extends StatelessWidget {
