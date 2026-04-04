@@ -12,9 +12,10 @@ typedef std::atomic<int> voice_state_atomic_t;
 typedef _Atomic int voice_state_atomic_t;
 #endif
 
+#include "justifier_audio.h"
+
 #define MAX_VOICES         32
 #define MAX_BUFFER_SIZE    4096
-#define NUM_WAVEFORM_TYPES 7
 
 // Forward declaration — actual type defined in faust_wrapper.cpp
 typedef struct FaustDSP FaustDSP;

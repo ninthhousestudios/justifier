@@ -22,7 +22,12 @@
 #include "saw_dsp.cpp"
 #include "square_dsp.cpp"
 #include "pulse_dsp.cpp"
-#include "noise_dsp.cpp"
+#include "white_noise_dsp.cpp"
+#include "pink_noise_dsp.cpp"
+#include "brown_noise_dsp.cpp"
+#include "lfnoise0_dsp.cpp"
+#include "lfnoise1_dsp.cpp"
+#include "lfnoise2_dsp.cpp"
 #include "fm_dsp.cpp"
 
 #include "faust_wrapper.h"
@@ -51,13 +56,18 @@ static bool     g_initialized = false;
 
 static dsp* create_dsp_instance(WaveformType type) {
     switch (type) {
-        case WAVEFORM_SINE:     return new SineDSP();
-        case WAVEFORM_TRIANGLE: return new TriangleDSP();
-        case WAVEFORM_SAW:      return new SawDSP();
-        case WAVEFORM_SQUARE:   return new SquareDSP();
-        case WAVEFORM_PULSE:    return new PulseDSP();
-        case WAVEFORM_NOISE:    return new NoiseDSP();
-        case WAVEFORM_FM:       return new FmDSP();
+        case WAVEFORM_SINE:        return new SineDSP();
+        case WAVEFORM_TRIANGLE:    return new TriangleDSP();
+        case WAVEFORM_SAW:         return new SawDSP();
+        case WAVEFORM_SQUARE:      return new SquareDSP();
+        case WAVEFORM_PULSE:       return new PulseDSP();
+        case WAVEFORM_WHITE_NOISE: return new White_noiseDSP();
+        case WAVEFORM_PINK_NOISE:  return new Pink_noiseDSP();
+        case WAVEFORM_BROWN_NOISE: return new Brown_noiseDSP();
+        case WAVEFORM_LFNOISE0:    return new Lfnoise0DSP();
+        case WAVEFORM_LFNOISE1:    return new Lfnoise1DSP();
+        case WAVEFORM_LFNOISE2:    return new Lfnoise2DSP();
+        case WAVEFORM_FM:          return new FmDSP();
         default:
             return nullptr;
     }

@@ -37,7 +37,7 @@ set(FAUST_DSP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/dsp")
 set(FAUST_GEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 file(MAKE_DIRECTORY ${FAUST_GEN_DIR})
 
-set(FAUST_DSP_FILES sine triangle saw square pulse noise fm)
+set(FAUST_DSP_FILES sine triangle saw square pulse white_noise pink_noise brown_noise lfnoise0 lfnoise1 lfnoise2 fm)
 
 foreach(DSP_NAME ${FAUST_DSP_FILES})
     # Capitalize first letter for class name (e.g. sine -> SineDSP)
@@ -63,9 +63,24 @@ endforeach()
 # ---------------------------------------------------------------------------
 # Library target
 # ---------------------------------------------------------------------------
-add_library(justifier_audio STATIC
+add_library(justifier_audio SHARED
     src/audio_engine.cpp
     src/faust_wrapper.cpp
+)
+
+# Only export justifier_* symbols, hide everything else
+set_target_properties(justifier_audio PROPERTIES
+    C_VISIBILITY_PRESET hidden
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN ON
+)
+
+# Mark this TU as the library build (triggers dllexport on Windows)
+target_compile_definitions(justifier_audio PRIVATE JUSTIFIER_BUILDING)
+
+install(TARGETS justifier_audio
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
 )
 
 # Generated DSP files are #included directly by faust_wrapper.cpp, not compiled

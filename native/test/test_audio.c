@@ -75,9 +75,13 @@ int main(int argc, char* argv[]) {
     justifier_voice_remove(v0);
     usleep(100 * 1000);
 
-    // --- 7: All 7 waveform types ---
-    TEST("All 7 waveform types");
-    const char* names[] = {"sine", "triangle", "saw", "square", "pulse", "noise", "FM"};
+    // --- 7: All 12 waveform types ---
+    TEST("All 12 waveform types");
+    const char* names[] = {
+        "sine", "triangle", "saw", "square", "pulse",
+        "white noise", "pink noise", "brown noise",
+        "lfnoise0", "lfnoise1", "lfnoise2", "FM"
+    };
     for (int type = WAVEFORM_SINE; type <= WAVEFORM_FM; type++) {
         printf("  Playing: %s at 330 Hz\n", names[type]);
         int v = justifier_voice_add((WaveformType)type, 330.0f, 0.25f);
@@ -92,7 +96,7 @@ int main(int argc, char* argv[]) {
         justifier_voice_remove(v);
         usleep(100 * 1000);
     }
-    PASS("All 7 waveform types played");
+    PASS("All 12 waveform types played");
 
     // --- 8: Multiple simultaneous voices ---
     TEST("8 simultaneous voices (chord)");

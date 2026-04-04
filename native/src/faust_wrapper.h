@@ -10,7 +10,7 @@ extern "C" {
 
 // Initialize the Faust wrapper.
 // Pre-allocates the DSP instance pool: POOL_PER_TYPE (10) instances per
-// waveform type = 70 instances total. No allocation happens after this call.
+// waveform type = 120 instances total. No allocation happens after this call.
 // Returns 0 on success, -1 on failure.
 int faust_wrapper_init(int sample_rate);
 
