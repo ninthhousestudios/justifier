@@ -250,3 +250,302 @@ Out.ar(out, Pan2.ar(sig * mul * env, pan));
 - `\gate` (default 1): controls EnvGen. Set to 0 to fade out, 1 to fade in.
 - `\fadeTime` (default 0.5): attack and release time for the envelope.
 - `doneAction: 0`: node stays alive after release so gate can be re-opened (for enable/disable toggle). Flutter sends `/n_free` explicitly when truly removing a voice.
+
+## Component Strategy
+
+### Design System: Material 3 (heavily themed)
+
+Material 3 as invisible foundation — dark, dense, compact. Provides battle-tested interaction infrastructure (focus traversal, scroll physics, gesture handling, accessibility) without imposing visual identity. Justifier's identity comes from the custom components.
+
+**Theme approach:** Custom `ThemeData` — dark backgrounds, muted accent colors, compact density, monospace fonts for numeric values.
+
+### Material 3 Foundation Components
+
+| Component | Used For | Customization |
+|-----------|----------|---------------|
+| `Slider` | Amplitude, pan, mod offset, filter cutoff, filter rq, fade time | Compact, no labels — value shown in card |
+| `TextField` | Reference frequency, wave name, ratio numerator/denominator | Monospace, tight padding, number-only |
+| `DropdownButton` | Preset selector, waveform selector | Dark, minimal chrome |
+| `IconButton` | Mute, solo, enable/disable, panic, delete | Small, icon-only, color-coded states |
+| `Card` | Voice card shell | Custom painted, not stock Material card |
+| `AlertDialog` | Delete confirmations | Dark themed |
+| `Tooltip` | Parameter hints, Hz readout on hover | |
+
+### Custom Components
+
+#### VoiceCard
+
+The core interactive unit. One card = one synth node.
+
+- **Content:** Data-driven from SynthDef descriptor — renders one control per visible parameter
+- **States:** enabled (normal), disabled (dimmed, still visible), creating (fade in)
+- **Interactions:** Toggle enable, edit all parameters inline, long-press to delete
+- **Derived values:** Actual Hz and cents from reference — always visible on card
+- **Key detail:** The descriptor drives what controls appear — adding a SynthDef descriptor automatically produces a new card layout with zero Dart changes
+
+#### WaveColumn
+
+A named group of voices with master controls.
+
+- **Anatomy:** Header (name, color swatch, volume slider, mute/solo buttons, menu) → vertical scroll of VoiceCards → "Add Voice" button at bottom
+- **States:** expanded (default), collapsed (header only), soloed (visually highlighted), muted (dimmed)
+- **Interactions:** Edit name/color, adjust master controls, collapse/expand, add voice, delete wave from menu
+
+#### RatioInput
+
+Enter a JI ratio as numerator/denominator.
+
+- **Anatomy:** Two small integer TextFields with a `/` divider between them
+- **Display:** Shows derived Hz and cents below as read-only text
+- **Validation:** Positive integers only, denominator cannot be zero
+
+#### WaveformSelector
+
+Choose which SynthDef a voice uses.
+
+- **Visual:** Dropdown — 7 waveforms in v1, too many for segmented buttons
+- **Behavior:** Switching waveform triggers a crossfade swap on scsynth (old node fades out, new node fades in, both overlap briefly)
+- **States:** Current selection highlighted, transition state during crossfade
+
+#### ConnectionStatusBadge
+
+Show scsynth connection state.
+
+- **States:** connected (green dot + "connected"), disconnected (red + "disconnected" banner), connecting (pulsing)
+- **Location:** Top bar, always visible
+- **Behavior:** Periodic `/status` ping drives state
+
+#### WorkspaceHeader
+
+Top bar — global controls.
+
+- **Anatomy:** App name | Reference Hz input | Master volume slider | ConnectionStatusBadge | Preset dropdown | Panic button
+
+#### ServerConsole
+
+Live window into scsynth communication and state.
+
+- **Anatomy:** Two sections — **Message Log** (scrolling OSC messages sent to scsynth) and **Node Tree** (live hierarchy: app group → wave groups → voice nodes)
+- **Desktop:** Always visible as a bottom panel or right-side panel — plenty of screen space
+- **Tablet/Mobile:** Toggleable via tab/switch, not always visible
+- **Node tree:** Polled via `/g_queryTree` on scsynth, shows real-time server state
+- **Purpose:** Discoverability — users see the cause-and-effect between UI action and server state. Invaluable for learning and debugging.
+
+### Component Implementation Roadmap
+
+**Phase 1 — Core (must have before anything makes sound):**
+- WorkspaceHeader (reference freq, panic, connection status)
+- WaveColumn (basic: add/remove, name, master volume, collapse/expand)
+- VoiceCard (basic: ratio, octave, amplitude, enable/disable)
+- RatioInput
+- ConnectionStatusBadge
+
+**Phase 2 — Full voice control:**
+- VoiceCard with full descriptor-driven rendering
+- WaveformSelector with crossfade
+- All slider controls (pan, mod, fade time, filter params)
+- Mute/solo on waves
+- ServerConsole (message log + node tree)
+
+**Phase 3 — Polish:**
+- Preset save/load/switch
+- Drag reorder (stretch goal)
+- Confirmation dialogs
+
+## UX Consistency Patterns
+
+### Parameter Editing
+
+All parameter controls follow the same interaction contract:
+
+- **Real-time feedback:** Every parameter change updates scsynth immediately (throttled at ~40 msg/sec). The sound IS the confirmation — no toasts, no checkmarks.
+- **Visual feedback:** The control itself reflects current value (slider position, text field content). Derived values (Hz, cents) update live as parameters change.
+- **Server feedback:** The ServerConsole message log shows each OSC message sent, so users can see the wire-level effect of every tweak. This is the visual confirmation layer.
+- **Sliders:** Drag to change. Value displayed on the card near the slider. No separate labels — the card layout makes the parameter name clear.
+- **Text fields (ratio, reference Hz):** Edit inline. Commit on Enter or focus loss. Invalid input reverts to previous value — no error dialogs for parameter entry.
+- **Dropdowns (waveform, preset):** Single tap to open, single tap to select. Waveform change triggers crossfade (visual transition state on the card during overlap).
+- **Toggles (enable/disable, mute, solo):** Single tap. Immediate. Icon changes state and color. Sound fades per `fadeTime`.
+
+### Destructive Actions & Sleep/Undo
+
+Justifier uses a **sleep-before-destroy** pattern for all deletions. Nothing is immediately destroyed.
+
+**Voice deletion:**
+1. User triggers delete (long-press or swipe on card)
+2. Voice enters "sleeping" state: `\gate 0` sent to scsynth (node fades out but stays alive), card visually ghosted with strikethrough on the name
+3. 10-second window: user can tap the sleeping card to wake it (`\gate 1`, restore visual state)
+4. After 10 seconds: `/n_free` sent, card removed from UI, state cleaned up
+
+**Wave deletion:**
+1. User triggers delete from wave header menu
+2. All voices in the wave enter sleeping state, wave column ghosted with strikethrough on wave name
+3. 10-second window: user can undo, all voices wake
+4. After 10 seconds: `/g_freeAll`, `/g_free`, column removed
+
+**Panic button:**
+- One click, instant, no confirmation. Sends `/g_freeAll appGroupId`.
+- This is the emergency stop — speed matters more than caution.
+- All voice cards reset to disabled state. Waves remain in UI (structure preserved, nodes gone). User can re-enable voices to recreate nodes.
+
+**Why sleep-before-destroy:** scsynth's `gate 0` / `doneAction: 0` architecture already keeps nodes alive after release. The sleep pattern exposes this as a UX concept. It generalizes well — any future destructible entity can follow the same sleep → timeout → destroy pipeline.
+
+### State Indication
+
+Consistent visual language for all states across the app:
+
+| State | Visual Treatment | Where |
+|-------|-----------------|-------|
+| Enabled | Normal appearance, full opacity | Voice card |
+| Disabled | Dimmed (reduced opacity), controls still visible | Voice card |
+| Sleeping (pending delete) | Ghosted + strikethrough on name, "wake" affordance | Voice card, wave column |
+| Muted | Dimmed, mute icon highlighted | Wave column |
+| Soloed | Visually highlighted (subtle border or glow), solo icon active | Wave column |
+| Connected | Green dot | ConnectionStatusBadge |
+| Disconnected | Red dot + "disconnected" text, banner across top | ConnectionStatusBadge |
+| Connecting | Pulsing dot | ConnectionStatusBadge |
+
+**Opacity scale:**
+- Full: 1.0 (enabled, active)
+- Dimmed: 0.5 (disabled, muted)
+- Ghosted: 0.3 (sleeping / pending delete)
+
+### Navigation Patterns
+
+Minimal — Justifier is a single-screen app.
+
+- **Horizontal scroll:** Waves arranged as columns, scroll left/right to see more
+- **Vertical scroll:** Voice cards within a wave scroll vertically
+- **ServerConsole:** On desktop, always visible as a panel. On tablet/mobile, toggle via tab/switch.
+- **No page navigation, no routing, no back button.** Everything is the workspace.
+
+### Feedback Patterns
+
+Justifier's primary feedback channel is **sound**. Visual feedback is secondary and should never compete with or distract from the audio.
+
+- **Parameter change:** Sound updates in real-time. No visual toast/snackbar.
+- **Voice created:** New card appears with fade-in animation. Node starts playing (if enabled).
+- **Voice deleted:** Card ghosts (sleep pattern). Sound fades out per fadeTime.
+- **Waveform switched:** Brief crossfade — both old and new cards visible during overlap, then old disappears.
+- **Connection lost:** Red banner — this is the one case where visual feedback is loud, because the user needs to know sound control is gone.
+- **Preset loaded:** Full workspace rebuilds. Brief transition (fade or dissolve) to signal the reset.
+
+### Empty States
+
+- **No waves:** Workspace shows centered "Add Wave" button with brief hint text
+- **Wave with no voices:** Wave column shows "Add Voice" button as the only content
+- **No presets:** Preset dropdown shows "No saved presets" disabled item
+- **Server not connected:** All controls disabled/greyed. ConnectionStatusBadge shows red. ServerConsole shows connection attempts.
+
+## Responsive Design & Accessibility
+
+### Responsive Strategy
+
+Desktop-first. v1 is desktop-only. Tablet/mobile are future targets (remote control surface use case).
+
+**Desktop (>1200px) — v1 primary target:**
+- Single-screen workspace: wave columns left, ServerConsole panel on right
+- 3–4 wave columns visible depending on window width and collapsed/expanded state
+- Dense controls are fine — mouse precision and hover states available
+- Core workflow: **configure → play → collapse → move on**. Collapse/expand is how users manage space, not tiny fonts.
+- Readable font sizes throughout. No need to shrink to fit — collapsed waves handle density.
+
+**Tablet (600–1200px) — future:**
+- 2 wave columns visible, horizontal scroll
+- ServerConsole as toggleable tab/switch (not permanent panel)
+- All touch targets minimum 44px
+- Sliders, buttons, ratio inputs all need touch-friendly sizing
+
+**Mobile (<600px) — future:**
+- 1 wave at a time, swipe between waves
+- ServerConsole toggleable (may not be useful at this size — revisit when implementing)
+- Maximum simplification of controls for touch
+
+### Layout Architecture
+
+```
+┌─────────────────────────────────────────────┬──────────────┐
+│                 Top Bar                      │              │
+│  Name │ Ref Hz │ Master Vol │ Status │ Panic │              │
+├──────────────────────────────────────────────┤  Server      │
+│                                              │  Console     │
+│  ┌─Wave 1──┐  ┌─Wave 2──┐  ┌─Wave 3──┐     │              │
+│  │ Header  │  │ Header  │  │ Collapsed│     │  ┌─Log──┐   │
+│  │ Voice 1 │  │ Voice 1 │  │ name,vol │     │  │ ...  │   │
+│  │ Voice 2 │  │ Voice 2 │  │ mute,solo│     │  │ ...  │   │
+│  │ Voice 3 │  │         │  │ 4 voices │     │  ├─Tree─┤   │
+│  │ + Add   │  │ + Add   │  └─────────┘     │  │ ...  │   │
+│  └─────────┘  └─────────┘                   │  │ ...  │   │
+│                              ← scroll →      │  └──────┘   │
+└──────────────────────────────────────────────┴──────────────┘
+```
+
+### Collapsed Wave Design
+
+Collapsed waves show only what's needed to mix without expanding:
+
+- **Visible:** Wave name, color indicator, voice count badge, master volume slider, mute/solo buttons, expand button
+- **Hidden:** All voice cards, "Add Voice" button
+- **Height:** Single row — as compact as a header bar
+- **Interaction:** Click expand button or double-click header to expand. All master controls remain fully functional while collapsed.
+
+This is a **core workflow pattern**, not polish. Configure voices → play → collapse → free up space for the next wave. Collapse/expand moves to Phase 1.
+
+### Accessibility
+
+**Target: WCAG AA compliance.**
+
+Material 3 provides most of this for free if we don't strip it out during theming.
+
+**Color & Contrast:**
+- Minimum 4.5:1 contrast ratio for all text on dark backgrounds
+- Dark theme must be carefully checked — low-contrast dark-on-dark is the #1 accessibility failure in dark UIs
+- State colors (enabled/disabled/sleeping/muted) must be distinguishable by more than color alone (opacity + strikethrough + icon changes)
+
+**Keyboard Navigation:**
+- Tab traversal through all controls (Material provides this)
+- Enter/Space to activate buttons and toggles
+- Arrow keys for slider adjustment
+- Visible focus rings on all interactive elements — must survive custom theming
+
+**Screen Reader Support:**
+- Semantic labels on all controls: "Amplitude slider, voice 3 in wave Sine Ocean, value 0.5" — not just "slider"
+- Wave and voice structure communicated via ARIA/semantics so screen readers convey hierarchy
+- State changes announced: "Voice 3 sleeping", "Wave muted", "Server disconnected"
+
+**Audio Tool Reality:**
+- The audio output itself cannot be made accessible to deaf users — that's the nature of the tool
+- All *controls* are fully operable without hearing
+- Visual state indication (opacity scale, strikethrough, color-coded badges) means a user who can't hear can still see structural state
+
+### Testing Strategy
+
+**Responsive (future, when targeting tablet/mobile):**
+- Test on actual devices, not just browser emulation
+- Verify touch targets meet 44px minimum
+- Test horizontal/vertical scroll interactions with touch
+
+**Accessibility (v1):**
+- Automated: Flutter accessibility checker, contrast ratio validation in theme
+- Manual: Tab through entire workspace with keyboard only
+- Screen reader: Test with platform screen reader (VoiceOver on macOS, Orca on Linux, Narrator on Windows)
+- Focus: Verify focus rings visible on every interactive element after theming
+
+### Implementation Notes
+
+- Use `MediaQuery` breakpoints but don't over-engineer for v1 — desktop layout is the only shipped layout
+- Build the responsive shell (breakpoint-aware layout) so tablet/mobile can be added without restructuring
+- Keep all accessibility labels in a centralized place for easy i18n later
+- ServerConsole panel width should be adjustable (draggable divider) on desktop
+
+## Keybinding System (Future)
+
+Justifier will consume an external Flutter keybinding package (to be built as a separate shared library). Not in v1 scope — all interactions are mouse/touch only initially.
+
+**Architectural requirement:** All user-triggerable actions must be invokable by name (command pattern), not buried in widget callbacks. This allows a keybinding layer to trigger any action without UI refactoring.
+
+**Target features (from the shared package):**
+- Vim-style modal keybindings (normal mode, insert mode, etc.)
+- Leader key / chord sequences
+- Hint overlay showing available bindings
+- User-configurable binding maps
+- Shared across multiple Flutter apps

@@ -47,3 +47,4 @@ app.*.map.json
 # AgentOps session artifacts
 .agents/
 .superpowers/
+native/build-shared/
