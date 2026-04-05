@@ -39,6 +39,9 @@ typedef struct {
     int             crossfade_samples_remaining; // 960 at 48kHz for 20ms (per D-02)
     float           attack_time;    // seconds (default 0.05)
     float           release_time;   // seconds (default 10.0)
+    float           filter_type;      // 0=LP, 1=HP, 2=BP, 3=notch
+    float           filter_cutoff;    // Hz, 20..20000 (default 20000)
+    float           filter_resonance; // 0.0..1.0 (default 0.0)
 } VoiceSlot;
 
 // Control message types for SPSC queue (per D-08)
@@ -55,6 +58,9 @@ typedef enum {
     MSG_SET_MOD_RATIO,
     MSG_SET_MOD_INDEX,
     MSG_SET_MASTER_VOLUME,
+    MSG_SET_FILTER_TYPE,
+    MSG_SET_FILTER_CUTOFF,
+    MSG_SET_FILTER_RESONANCE,
 } ControlMessageType;
 
 typedef struct {

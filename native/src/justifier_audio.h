@@ -59,6 +59,11 @@ JUSTIFIER_EXPORT void justifier_voice_set_waveform(int voice_id, WaveformType ty
 JUSTIFIER_EXPORT void justifier_voice_set_mod_ratio(int voice_id, float ratio);
 JUSTIFIER_EXPORT void justifier_voice_set_mod_index(int voice_id, float index);
 
+// Per-voice filter
+JUSTIFIER_EXPORT void justifier_voice_set_filter_type(int voice_id, int type);
+JUSTIFIER_EXPORT void justifier_voice_set_filter_cutoff(int voice_id, float hz);
+JUSTIFIER_EXPORT void justifier_voice_set_filter_resonance(int voice_id, float resonance);
+
 // Gate (envelope on/off — attack on create, release on sleep-before-destroy)
 JUSTIFIER_EXPORT void justifier_voice_set_gate(int voice_id, int gate_on);
 JUSTIFIER_EXPORT void justifier_voice_set_gate_times(int voice_id, float attack_s, float release_s);
