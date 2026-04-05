@@ -21,9 +21,10 @@ typedef _Atomic int voice_state_atomic_t;
 typedef struct FaustDSP FaustDSP;
 
 typedef enum {
-    VOICE_FREE     = 0,
-    VOICE_ACTIVE   = 1,
-    VOICE_FADING   = 2,  // crossfade in progress
+    VOICE_FREE      = 0,
+    VOICE_ACTIVE    = 1,
+    VOICE_FADING    = 2,  // crossfade in progress
+    VOICE_RELEASING = 3,  // gate off, release envelope running
 } VoiceState;
 
 typedef struct {
@@ -39,6 +40,9 @@ typedef struct {
     int             crossfade_samples_remaining; // 960 at 48kHz for 20ms (per D-02)
     float           attack_time;    // seconds (default 0.05)
     float           release_time;   // seconds (default 10.0)
+    float           decay_time;     // seconds (default 0.3)
+    float           sustain_level;  // 0.0 to 1.0 (default 0.8)
+    int             release_samples_remaining; // countdown for VOICE_RELEASING timeout
     float           filter_type;      // 0=LP, 1=HP, 2=BP, 3=notch
     float           filter_cutoff;    // Hz, 20..20000 (default 20000)
     float           filter_resonance; // 0.0..1.0 (default 0.0)
@@ -76,6 +80,8 @@ typedef struct {
         } voice_add;
         struct {
             float      attack_s;
+            float      decay_s;
+            float      sustain_level;
             float      release_s;
         } gate_times;
     };

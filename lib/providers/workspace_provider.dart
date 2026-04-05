@@ -62,25 +62,17 @@ class WorkspaceNotifier extends Notifier<WorkspaceState> {
 
   void removeWave(String waveId) {
     final wave = state.waves.firstWhere((w) => w.id == waveId);
-    // Fade out all voices, then remove the wave.
     for (final voice in wave.voices) {
       if (voice.engineVoiceId != null && !voice.dying) {
-        _engine.setGateTimes(voice.engineVoiceId!, release: voice.fadeTime);
-        _engine.setGate(voice.engineVoiceId!, false);
+        _engine.removeVoice(voice.engineVoiceId!);
       }
     }
-    final maxFade = wave.voices.isEmpty
+    final maxRelease = wave.voices.isEmpty
         ? 0.0
-        : wave.voices.map((v) => v.fadeTime).reduce((a, b) => a > b ? a : b);
+        : wave.voices.map((v) => v.releaseTime).reduce((a, b) => a > b ? a : b);
     Future.delayed(
-      Duration(milliseconds: (maxFade * 1000).round() + 50),
+      Duration(milliseconds: (maxRelease * 1000).round() + 1000),
       () {
-        // Remove all engine voices and the wave from state.
-        for (final voice in wave.voices) {
-          if (voice.engineVoiceId != null) {
-            _engine.removeVoice(voice.engineVoiceId!);
-          }
-        }
         state = state.copyWith(
           waves: state.waves.where((w) => w.id != waveId).toList(),
         );
@@ -90,9 +82,15 @@ class WorkspaceNotifier extends Notifier<WorkspaceState> {
 
   String addVoice(String waveId, WaveformType type) {
     final voiceId = _uuid.v4();
-    final hz = Voice(waveform: type, id: voiceId).frequencyHz(state.referenceHz);
+    final defaults = Voice(waveform: type, id: voiceId);
+    final hz = defaults.frequencyHz(state.referenceHz);
     final engineId = _engine.addVoice(type, hz, 0.5);
     if (engineId >= 0) {
+      _engine.setGateTimes(engineId,
+          attack: defaults.attackTime,
+          decay: defaults.decayTime,
+          sustain: defaults.sustainLevel,
+          release: defaults.releaseTime);
       _engine.setGate(engineId, true);
     }
     final voice = Voice(
@@ -114,34 +112,32 @@ class WorkspaceNotifier extends Notifier<WorkspaceState> {
     final voice = wave.voices.firstWhere((v) => v.id == voiceId);
 
     if (voice.engineVoiceId != null && !voice.dying) {
-      // Phase 1: gate off with short release, mark as dying.
-      final releaseTime = voice.fadeTime;
-      _engine.setGateTimes(voice.engineVoiceId!, release: releaseTime);
-      _engine.setGate(voice.engineVoiceId!, false);
+      // C engine owns lifecycle: MSG_VOICE_REMOVE sets gate=0 and
+      // enters VOICE_RELEASING with timeout = release_time + 0.5s.
+      _engine.removeVoice(voice.engineVoiceId!);
       updateVoice(waveId, voiceId, voice.copyWith(dying: true));
 
-      // Phase 2: after the release envelope completes, actually remove.
+      // Dart cleanup timer: remove from workspace state after release.
+      // Slightly longer than C timeout to ensure DSP is freed first.
+      final releaseTime = voice.releaseTime;
       Future.delayed(
-        Duration(milliseconds: (releaseTime * 1000).round() + 50),
+        Duration(milliseconds: (releaseTime * 1000).round() + 1000),
         () => _finalizeRemove(waveId, voiceId),
       );
     } else {
-      // No engine voice or already dying — remove immediately.
       _finalizeRemove(waveId, voiceId);
     }
   }
 
   void _finalizeRemove(String waveId, String voiceId) {
     final waveIdx = state.waves.indexWhere((w) => w.id == waveId);
-    if (waveIdx < 0) return; // wave already removed
+    if (waveIdx < 0) return;
     final wave = state.waves[waveIdx];
     final voice = wave.voices.where((v) => v.id == voiceId).firstOrNull;
-    if (voice == null) return; // voice already removed
-    if (!voice.dying) return; // undo was clicked — don't remove
+    if (voice == null) return;
+    if (!voice.dying) return; // undo was clicked
 
-    if (voice.engineVoiceId != null) {
-      _engine.removeVoice(voice.engineVoiceId!);
-    }
+    // Just remove from Dart state. C engine already freed the DSP.
     state = state.copyWith(
       waves: state.waves.map((w) {
         if (w.id != waveId) return w;
@@ -158,8 +154,7 @@ class WorkspaceNotifier extends Notifier<WorkspaceState> {
     if (!voice.dying) return;
 
     if (voice.engineVoiceId != null) {
-      // Restore the gate — voice comes back to life.
-      _engine.setGateTimes(voice.engineVoiceId!, attack: 0.05);
+      // Voice is in VOICE_RELEASING — re-gate returns it to VOICE_ACTIVE.
       _engine.setGate(voice.engineVoiceId!, true);
     }
     updateVoice(waveId, voiceId, voice.copyWith(dying: false));
@@ -203,6 +198,16 @@ class WorkspaceNotifier extends Notifier<WorkspaceState> {
       }
       if (updated.filterResonance != old.filterResonance) {
         _engine.setFilterResonance(eid, updated.filterResonance);
+      }
+      if (updated.attackTime != old.attackTime ||
+          updated.decayTime != old.decayTime ||
+          updated.sustainLevel != old.sustainLevel ||
+          updated.releaseTime != old.releaseTime) {
+        _engine.setGateTimes(eid,
+            attack: updated.attackTime,
+            decay: updated.decayTime,
+            sustain: updated.sustainLevel,
+            release: updated.releaseTime);
       }
     }
 

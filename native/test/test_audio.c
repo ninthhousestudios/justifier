@@ -37,6 +37,7 @@ int main(int argc, char* argv[]) {
     TEST("Sine wave at 440 Hz");
     int v0 = justifier_voice_add(WAVEFORM_SINE, 440.0f, 0.3f);
     CHECK(v0 >= 0, "voice_add returns valid id");
+    justifier_voice_set_gate_times(v0, 0.01f, 0.01f, 0.8f, 0.05f);  // short release for tests
     usleep(play_ms * 1000);
     CHECK(justifier_get_active_voice_count() == 1, "1 active voice");
     PASS("Sine plays audibly");
@@ -73,7 +74,7 @@ int main(int argc, char* argv[]) {
     PASS("Detune applied and restored");
 
     justifier_voice_remove(v0);
-    usleep(100 * 1000);
+    usleep(600 * 1000);  // wait for VOICE_RELEASING to finish
 
     // --- 7: All 12 waveform types ---
     TEST("All 12 waveform types");
@@ -86,6 +87,7 @@ int main(int argc, char* argv[]) {
         printf("  Playing: %s at 330 Hz\n", names[type]);
         int v = justifier_voice_add((WaveformType)type, 330.0f, 0.25f);
         CHECK(v >= 0, names[type]);
+        justifier_voice_set_gate_times(v, 0.01f, 0.01f, 0.8f, 0.05f);
 
         if (type == WAVEFORM_FM) {
             justifier_voice_set_mod_ratio(v, 2.0f);
@@ -94,7 +96,7 @@ int main(int argc, char* argv[]) {
 
         usleep(play_ms * 1000);
         justifier_voice_remove(v);
-        usleep(100 * 1000);
+        usleep(600 * 1000);
     }
     PASS("All 12 waveform types played");
 
@@ -106,6 +108,7 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < 8; i++) {
         voices[i] = justifier_voice_add(WAVEFORM_SINE, freqs[i], 0.15f);
         CHECK(voices[i] >= 0, "voice slot allocated");
+        justifier_voice_set_gate_times(voices[i], 0.01f, 0.01f, 0.8f, 0.05f);
     }
     usleep(50 * 1000);  // let audio thread drain SPSC queue
     CHECK(justifier_get_active_voice_count() == 8, "8 voices active");
@@ -114,13 +117,14 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < 8; i++) {
         justifier_voice_remove(voices[i]);
     }
-    usleep(200 * 1000);
+    usleep(600 * 1000);
     PASS("8 simultaneous voices played and removed");
 
     // --- 9: Waveform crossfade ---
     TEST("Waveform crossfade sine -> saw -> square");
     int vx = justifier_voice_add(WAVEFORM_SINE, 440.0f, 0.3f);
     CHECK(vx >= 0, "crossfade voice created");
+    justifier_voice_set_gate_times(vx, 0.01f, 0.01f, 0.8f, 0.05f);
     usleep(play_ms * 1000);
     printf("  sine -> saw\n");
     justifier_voice_set_waveform(vx, WAVEFORM_SAW);
@@ -129,12 +133,13 @@ int main(int argc, char* argv[]) {
     justifier_voice_set_waveform(vx, WAVEFORM_SQUARE);
     usleep(play_ms * 1000);
     justifier_voice_remove(vx);
-    usleep(100 * 1000);
+    usleep(600 * 1000);
     PASS("Waveform crossfade completed");
 
     // --- 10: Panic ---
     TEST("Panic (instant silence)");
     int vp = justifier_voice_add(WAVEFORM_SAW, 220.0f, 0.4f);
+    justifier_voice_set_gate_times(vp, 0.01f, 0.01f, 0.8f, 0.05f);
     usleep(play_ms * 1000);
     printf("  Activating panic...\n");
     justifier_panic();
@@ -144,12 +149,13 @@ int main(int argc, char* argv[]) {
     justifier_unpanic();
     usleep(play_ms * 1000);
     justifier_voice_remove(vp);
-    usleep(100 * 1000);
+    usleep(600 * 1000);
     PASS("Panic silenced and resumed correctly");
 
     // --- 11: Master volume ---
     TEST("Master volume");
     int vm = justifier_voice_add(WAVEFORM_SINE, 440.0f, 0.5f);
+    justifier_voice_set_gate_times(vm, 0.01f, 0.01f, 0.8f, 0.05f);
     usleep(play_ms * 1000 / 2);
     printf("  Master volume -> 0.1\n");
     justifier_set_master_volume(0.1f);
@@ -158,13 +164,14 @@ int main(int argc, char* argv[]) {
     justifier_set_master_volume(1.0f);
     usleep(play_ms * 1000 / 2);
     justifier_voice_remove(vm);
-    usleep(100 * 1000);
+    usleep(600 * 1000);
     PASS("Master volume changes applied");
 
     // --- 12: Per-voice filter ---
     TEST("Per-voice filter");
     int vf = justifier_voice_add(WAVEFORM_SAW, 440.0f, 0.3f);
     CHECK(vf >= 0, "filter test voice created");
+    justifier_voice_set_gate_times(vf, 0.01f, 0.01f, 0.8f, 0.05f);
     usleep(play_ms * 1000);
 
     // All 4 filter types
@@ -207,10 +214,71 @@ int main(int argc, char* argv[]) {
     PASS("Filter survives waveform crossfade");
 
     justifier_voice_remove(vf);
-    usleep(100 * 1000);
+    usleep(600 * 1000);
     PASS("Per-voice filter tests complete");
 
-    // --- 13: Shutdown ---
+    // --- 13: ADSR envelope + voice lifecycle ---
+    TEST("ADSR envelope + voice lifecycle");
+
+    // 13a: Set all 4 ADSR params, voice stays active
+    {
+        int va = justifier_voice_add(WAVEFORM_SINE, 440.0f, 0.3f);
+        CHECK(va >= 0, "ADSR: voice created");
+        justifier_voice_set_gate_times(va, 0.01f, 0.1f, 0.7f, 0.5f);
+        usleep(50 * 1000);  // let audio thread process
+        CHECK(justifier_get_active_voice_count() == 1, "ADSR: voice active after set_gate_times");
+        justifier_voice_remove(va);
+        usleep(1200 * 1000);  // wait past release_s=0.5 + 0.5s safety margin + overhead
+        PASS("ADSR: all 4 params set, voice lifecycle clean");
+    }
+
+    // 13b: Voice stays in VOICE_RELEASING immediately after remove
+    {
+        int vr = justifier_voice_add(WAVEFORM_SINE, 330.0f, 0.3f);
+        CHECK(vr >= 0, "ADSR releasing: voice created");
+        usleep(50 * 1000);  // let voice start
+        justifier_voice_remove(vr);
+        usleep(50 * 1000);  // let audio thread process MSG_VOICE_REMOVE
+        // Shortly after remove: should be VOICE_RELEASING, not freed
+        CHECK(justifier_get_active_voice_count() == 1,
+              "ADSR releasing: voice count still 1 immediately after remove");
+        // Default release = 2.0s, margin = 0.5s -> wait 3s for it to free
+        usleep(3000 * 1000);
+        CHECK(justifier_get_active_voice_count() == 0,
+              "ADSR releasing: voice freed after release completes");
+        PASS("ADSR: voice releasing state confirmed");
+    }
+
+    // 13c: Re-gate during release keeps voice alive
+    {
+        int vg = justifier_voice_add(WAVEFORM_SINE, 550.0f, 0.3f);
+        CHECK(vg >= 0, "ADSR re-gate: voice created");
+        usleep(50 * 1000);
+        justifier_voice_remove(vg);          // enters VOICE_RELEASING
+        usleep(50 * 1000);                  // let audio thread process remove
+        justifier_voice_set_gate(vg, 1);    // re-gate
+        // Sleep past what would have been the release timeout (~3s)
+        usleep(3000 * 1000);
+        CHECK(justifier_get_active_voice_count() == 1,
+              "ADSR re-gate: voice still alive after re-gate during release");
+        justifier_voice_remove(vg);
+        usleep(3000 * 1000);  // wait for final release
+        PASS("ADSR: re-gate during release keeps voice alive");
+    }
+
+    // 13d: Default ADSR params work without explicit set
+    {
+        int vd = justifier_voice_add(WAVEFORM_SINE, 220.0f, 0.3f);
+        CHECK(vd >= 0, "ADSR defaults: voice created");
+        usleep(50 * 1000);
+        CHECK(justifier_get_active_voice_count() == 1,
+              "ADSR defaults: voice plays with default ADSR");
+        justifier_voice_remove(vd);
+        usleep(3000 * 1000);  // wait for default release (2.0s + margin)
+        PASS("ADSR: default params work");
+    }
+
+    // --- 14: Shutdown ---
     TEST("Shutdown");
     int xruns = justifier_get_xrun_count();
     justifier_shutdown();

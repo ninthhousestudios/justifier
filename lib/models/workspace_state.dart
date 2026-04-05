@@ -85,7 +85,10 @@ class Voice {
     this.amplitude = 0.5,
     this.pan = 0.0,
     this.detuneCents = 0.0,
-    this.fadeTime = 8.0,
+    this.attackTime = 0.05,
+    this.decayTime = 0.3,
+    this.sustainLevel = 0.8,
+    this.releaseTime = 2.0,
     this.enabled = true,
     this.dying = false,
     this.modRatio = 1.0,
@@ -104,7 +107,10 @@ class Voice {
   final double amplitude;
   final double pan;
   final double detuneCents;
-  final double fadeTime;
+  final double attackTime;
+  final double decayTime;
+  final double sustainLevel;
+  final double releaseTime;
   final bool enabled;
   final bool dying;
   final double modRatio;
@@ -136,7 +142,10 @@ class Voice {
     double? amplitude,
     double? pan,
     double? detuneCents,
-    double? fadeTime,
+    double? attackTime,
+    double? decayTime,
+    double? sustainLevel,
+    double? releaseTime,
     bool? enabled,
     bool? dying,
     double? modRatio,
@@ -155,7 +164,10 @@ class Voice {
       amplitude: amplitude ?? this.amplitude,
       pan: pan ?? this.pan,
       detuneCents: detuneCents ?? this.detuneCents,
-      fadeTime: fadeTime ?? this.fadeTime,
+      attackTime: attackTime ?? this.attackTime,
+      decayTime: decayTime ?? this.decayTime,
+      sustainLevel: sustainLevel ?? this.sustainLevel,
+      releaseTime: releaseTime ?? this.releaseTime,
       enabled: enabled ?? this.enabled,
       dying: dying ?? this.dying,
       modRatio: modRatio ?? this.modRatio,

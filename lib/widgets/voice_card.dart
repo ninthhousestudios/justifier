@@ -49,7 +49,7 @@ class VoiceCard extends ConsumerWidget {
 
     if (voice.dying) {
       return _DyingBar(
-        fadeTime: voice.fadeTime,
+        releaseTime: voice.releaseTime,
         color: accentColor,
         onUndo: () => ref
             .read(workspaceProvider.notifier)
@@ -235,6 +235,44 @@ class VoiceCard extends ConsumerWidget {
             color: accentColor,
           ),
 
+          // ADSR envelope controls
+          const SizedBox(height: 2),
+          _SliderRow(
+            label: 'atk',
+            value: voice.attackTime,
+            min: 0.001,
+            max: 5.0,
+            onChanged: (v) => _update(ref, voice.copyWith(attackTime: v)),
+            color: accentColor,
+            displayValue: '${voice.attackTime.toStringAsFixed(3)}s',
+          ),
+          _SliderRow(
+            label: 'dec',
+            value: voice.decayTime,
+            min: 0.001,
+            max: 5.0,
+            onChanged: (v) => _update(ref, voice.copyWith(decayTime: v)),
+            color: accentColor,
+            displayValue: '${voice.decayTime.toStringAsFixed(3)}s',
+          ),
+          _SliderRow(
+            label: 'sus',
+            value: voice.sustainLevel,
+            min: 0.0,
+            max: 1.0,
+            onChanged: (v) => _update(ref, voice.copyWith(sustainLevel: v)),
+            color: accentColor,
+          ),
+          _SliderRow(
+            label: 'rel',
+            value: voice.releaseTime,
+            min: 0.01,
+            max: 30.0,
+            onChanged: (v) => _update(ref, voice.copyWith(releaseTime: v)),
+            color: accentColor,
+            displayValue: '${voice.releaseTime.toStringAsFixed(2)}s',
+          ),
+
           // FM controls (FM waveform only)
           if (voice.waveform == WaveformType.fm) ...[
             _SliderRow(
@@ -393,12 +431,12 @@ class _FilterTypeRow extends StatelessWidget {
 
 class _DyingBar extends StatefulWidget {
   const _DyingBar({
-    required this.fadeTime,
+    required this.releaseTime,
     required this.color,
     required this.onUndo,
   });
 
-  final double fadeTime;
+  final double releaseTime;
   final Color color;
   final VoidCallback onUndo;
 
@@ -413,7 +451,7 @@ class _DyingBarState extends State<_DyingBar> {
   @override
   void initState() {
     super.initState();
-    _total = Duration(milliseconds: (widget.fadeTime * 1000).round());
+    _total = Duration(milliseconds: (widget.releaseTime * 1000).round());
     _stopwatch = Stopwatch()..start();
     _tick();
   }

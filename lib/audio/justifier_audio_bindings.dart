@@ -193,18 +193,35 @@ class JustifierAudioBindings {
   void justifier_voice_set_gate_times(
     int voice_id,
     double attack_s,
+    double decay_s,
+    double sustain_level,
     double release_s,
   ) {
-    return _justifier_voice_set_gate_times(voice_id, attack_s, release_s);
+    return _justifier_voice_set_gate_times(
+      voice_id,
+      attack_s,
+      decay_s,
+      sustain_level,
+      release_s,
+    );
   }
 
   late final _justifier_voice_set_gate_timesPtr =
       _lookup<
-        ffi.NativeFunction<ffi.Void Function(ffi.Int, ffi.Float, ffi.Float)>
+        ffi.NativeFunction<
+          ffi.Void Function(
+            ffi.Int,
+            ffi.Float,
+            ffi.Float,
+            ffi.Float,
+            ffi.Float,
+          )
+        >
       >('justifier_voice_set_gate_times');
   late final _justifier_voice_set_gate_times =
-      _justifier_voice_set_gate_timesPtr
-          .asFunction<void Function(int, double, double)>();
+      _justifier_voice_set_gate_timesPtr.asFunction<
+        void Function(int, double, double, double, double)
+      >();
 
   void justifier_panic() {
     return _justifier_panic();

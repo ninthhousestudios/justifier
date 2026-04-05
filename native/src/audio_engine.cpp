@@ -65,7 +65,10 @@ static void apply_control_message(AudioEngine* eng, const ControlMessage* msg) {
             slot->pan = 0.0f;
             slot->detune_cents = 0.0f;
             slot->attack_time = 0.05f;
-            slot->release_time = 10.0f;
+            slot->decay_time    = 0.3f;
+            slot->sustain_level = 0.8f;
+            slot->release_time = 2.0f;
+            slot->release_samples_remaining = 0;
             slot->filter_type      = 0.0f;      // LP
             slot->filter_cutoff    = 20000.0f;   // effectively bypass
             slot->filter_resonance = 0.0f;
@@ -76,6 +79,8 @@ static void apply_control_message(AudioEngine* eng, const ControlMessage* msg) {
             faust_wrapper_set_param(slot->dsp, "freq",    slot->frequency);
             faust_wrapper_set_param(slot->dsp, "amp",     slot->amplitude);
             faust_wrapper_set_param(slot->dsp, "attack",  slot->attack_time);
+            faust_wrapper_set_param(slot->dsp, "decay",   slot->decay_time);
+            faust_wrapper_set_param(slot->dsp, "sustain", slot->sustain_level);
             faust_wrapper_set_param(slot->dsp, "release", slot->release_time);
             faust_wrapper_set_param(slot->dsp, "gate",    1.0f);
             faust_wrapper_set_param(slot->dsp, "filter_type",   slot->filter_type);
@@ -90,17 +95,21 @@ static void apply_control_message(AudioEngine* eng, const ControlMessage* msg) {
         case MSG_VOICE_REMOVE: {
             if (id < 0 || id >= MAX_VOICES) break;
             VoiceSlot* slot = &eng->voices[id];
-            if (slot->state.load() == VOICE_FREE) break;
+            int state = slot->state.load();
+            if (state == VOICE_FREE || state == VOICE_RELEASING) break;
 
-            faust_wrapper_set_param(slot->dsp, "gate", 0.0f);
-            faust_wrapper_release(slot->dsp);
-            slot->dsp = NULL;
-            if (slot->dsp_pending) {
-                faust_wrapper_release(slot->dsp_pending);
+            // If mid-crossfade, finish it immediately
+            if (state == VOICE_FADING && slot->dsp_pending) {
+                faust_wrapper_release(slot->dsp);
+                slot->dsp = slot->dsp_pending;
                 slot->dsp_pending = NULL;
             }
-            slot->state.store(VOICE_FREE);
-            eng->active_voice_count.fetch_sub(1);
+
+            faust_wrapper_set_param(slot->dsp, "gate", 0.0f);
+            // Timeout = release_time + 0.5s safety margin
+            slot->release_samples_remaining =
+                (int)((slot->release_time + 0.5f) * (float)eng->sample_rate);
+            slot->state.store(VOICE_RELEASING);
             break;
         }
 
@@ -146,6 +155,7 @@ static void apply_control_message(AudioEngine* eng, const ControlMessage* msg) {
             if (id < 0 || id >= MAX_VOICES) break;
             VoiceSlot* slot = &eng->voices[id];
             if (slot->state.load() == VOICE_FREE) break;
+            if (slot->state.load() == VOICE_RELEASING) break;  // don't crossfade a dying voice
             if (slot->waveform_type == msg->int_value) break;  // no-op
 
             FaustDSP* new_dsp = faust_wrapper_acquire((WaveformType)msg->int_value);
@@ -155,6 +165,8 @@ static void apply_control_message(AudioEngine* eng, const ControlMessage* msg) {
             faust_wrapper_set_param(new_dsp, "amp",       slot->amplitude);
             faust_wrapper_set_param(new_dsp, "detune",    slot->detune_cents);
             faust_wrapper_set_param(new_dsp, "attack",    slot->attack_time);
+            faust_wrapper_set_param(new_dsp, "decay",     slot->decay_time);
+            faust_wrapper_set_param(new_dsp, "sustain",   slot->sustain_level);
             faust_wrapper_set_param(new_dsp, "release",   slot->release_time);
             faust_wrapper_set_param(new_dsp, "gate",      1.0f);
             faust_wrapper_set_param(new_dsp, "filter_type",   slot->filter_type);
@@ -175,19 +187,35 @@ static void apply_control_message(AudioEngine* eng, const ControlMessage* msg) {
         case MSG_SET_GATE: {
             if (id < 0 || id >= MAX_VOICES) break;
             VoiceSlot* slot = &eng->voices[id];
-            if (slot->state.load() == VOICE_FREE) break;
-            faust_wrapper_set_param(slot->dsp, "gate", (float)msg->int_value);
+            int state = slot->state.load();
+            if (state == VOICE_FREE) break;
+            faust_wrapper_set_param(slot->dsp, "gate", msg->int_value ? 1.0f : 0.0f);
+            // Re-gate: if turning gate ON while releasing, return to ACTIVE
+            if (msg->int_value && state == VOICE_RELEASING) {
+                slot->release_samples_remaining = 0;
+                slot->state.store(VOICE_ACTIVE);
+            }
             break;
         }
 
         case MSG_SET_GATE_TIMES: {
             if (id < 0 || id >= MAX_VOICES) break;
             VoiceSlot* slot = &eng->voices[id];
-            if (slot->state.load() == VOICE_FREE) break;
-            slot->attack_time  = msg->gate_times.attack_s;
-            slot->release_time = msg->gate_times.release_s;
+            if (slot->state.load() == VOICE_FREE || slot->state.load() == VOICE_RELEASING) break;
+            slot->attack_time   = msg->gate_times.attack_s;
+            slot->decay_time    = msg->gate_times.decay_s;
+            slot->sustain_level = msg->gate_times.sustain_level;
+            slot->release_time  = msg->gate_times.release_s;
             faust_wrapper_set_param(slot->dsp, "attack",  slot->attack_time);
+            faust_wrapper_set_param(slot->dsp, "decay",   slot->decay_time);
+            faust_wrapper_set_param(slot->dsp, "sustain", slot->sustain_level);
             faust_wrapper_set_param(slot->dsp, "release", slot->release_time);
+            if (slot->dsp_pending) {
+                faust_wrapper_set_param(slot->dsp_pending, "attack",  slot->attack_time);
+                faust_wrapper_set_param(slot->dsp_pending, "decay",   slot->decay_time);
+                faust_wrapper_set_param(slot->dsp_pending, "sustain", slot->sustain_level);
+                faust_wrapper_set_param(slot->dsp_pending, "release", slot->release_time);
+            }
             break;
         }
 
@@ -315,6 +343,25 @@ static void audio_callback(ma_device* device, void* output,
                 slot->dsp         = slot->dsp_pending;
                 slot->dsp_pending = NULL;
                 slot->state.store(VOICE_ACTIVE);
+            }
+        } else if (state == VOICE_RELEASING) {
+            // Voice is in release phase — keep rendering until timeout
+            faust_wrapper_compute(slot->dsp, (int)frame_count, tmp);
+
+            float amp_L = slot->amplitude * (1.0f - slot->pan) * 0.5f;
+            float amp_R = slot->amplitude * (1.0f + slot->pan) * 0.5f;
+
+            for (ma_uint32 s = 0; s < frame_count; s++) {
+                out[s * 2]     += tmp[s] * amp_L * eng->master_volume;
+                out[s * 2 + 1] += tmp[s] * amp_R * eng->master_volume;
+            }
+
+            slot->release_samples_remaining -= (int)frame_count;
+            if (slot->release_samples_remaining <= 0) {
+                faust_wrapper_release(slot->dsp);
+                slot->dsp = NULL;
+                slot->state.store(VOICE_FREE);
+                eng->active_voice_count.fetch_sub(1);
             }
         } else {
             // Normal active voice
@@ -509,13 +556,15 @@ void justifier_voice_set_gate(int voice_id, int gate_on) {
     g_engine.control_queue->enqueue(msg);
 }
 
-void justifier_voice_set_gate_times(int voice_id, float attack_s, float release_s) {
+void justifier_voice_set_gate_times(int voice_id, float attack_s, float decay_s, float sustain_level, float release_s) {
     if (!g_engine.running) return;
     ControlMessage msg = {};
-    msg.type                = MSG_SET_GATE_TIMES;
-    msg.voice_id            = voice_id;
-    msg.gate_times.attack_s  = attack_s;
-    msg.gate_times.release_s = release_s;
+    msg.type                     = MSG_SET_GATE_TIMES;
+    msg.voice_id                 = voice_id;
+    msg.gate_times.attack_s      = attack_s;
+    msg.gate_times.decay_s       = decay_s;
+    msg.gate_times.sustain_level = sustain_level;
+    msg.gate_times.release_s     = release_s;
     g_engine.control_queue->enqueue(msg);
 }
 

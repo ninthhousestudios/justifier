@@ -66,7 +66,7 @@ class FakeAudioEngine implements AudioEngine {
 
   @override
   void setGateTimes(int voiceId,
-      {double attack = 0.05, double release = 10.0}) {}
+      {double attack = 0.05, double decay = 0.3, double sustain = 0.8, double release = 2.0}) {}
 
   @override
   void panic() {}

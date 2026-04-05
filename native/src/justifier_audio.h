@@ -66,7 +66,7 @@ JUSTIFIER_EXPORT void justifier_voice_set_filter_resonance(int voice_id, float r
 
 // Gate (envelope on/off — attack on create, release on sleep-before-destroy)
 JUSTIFIER_EXPORT void justifier_voice_set_gate(int voice_id, int gate_on);
-JUSTIFIER_EXPORT void justifier_voice_set_gate_times(int voice_id, float attack_s, float release_s);
+JUSTIFIER_EXPORT void justifier_voice_set_gate_times(int voice_id, float attack_s, float decay_s, float sustain_level, float release_s);
 
 // Global
 JUSTIFIER_EXPORT void justifier_panic(void);     // atomic flag — one buffer cycle to silence

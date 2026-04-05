@@ -88,8 +88,19 @@ class AudioEngine {
   void setGate(int voiceId, bool on) =>
       _bindings.justifier_voice_set_gate(voiceId, on ? 1 : 0);
 
-  void setGateTimes(int voiceId, {double attack = 0.05, double release = 10.0}) =>
-      _bindings.justifier_voice_set_gate_times(voiceId, attack, release);
+  void setGateTimes(
+    int voiceId, {
+    double attack = 0.05,
+    double decay = 0.3,
+    double sustain = 0.8,
+    double release = 2.0,
+  }) => _bindings.justifier_voice_set_gate_times(
+        voiceId,
+        attack,
+        decay,
+        sustain,
+        release,
+      );
 
   // ---------------------------------------------------------------------------
   // Global controls
