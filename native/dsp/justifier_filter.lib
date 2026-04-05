@@ -1,0 +1,23 @@
+// justifier_filter.lib — shared multi-mode filter for all Justifier voices
+//
+// Usage in any .dsp:  source : jf_filter
+//
+// Params exposed (suffix-matched by faust_wrapper):
+//   filter_type   — 0=LP, 1=HP, 2=BP, 3=notch
+//   filter_cutoff — 20..20000 Hz (default 20000 = bypass)
+//   filter_res    — 0.0..1.0 (mapped to Q 0.707..20)
+
+import("stdfaust.lib");
+
+jf_filter = _ <: lp, hp, bp, nt : ba.selectn(4, int(filter_type))
+with {
+    filter_type   = nentry("filter_type", 0, 0, 3, 1);
+    filter_cutoff = nentry("filter_cutoff", 20000.0, 20.0, 20000.0, 1.0) : si.smoo;
+    filter_res    = nentry("filter_res", 0.0, 0.0, 1.0, 0.01) : si.smoo;
+    filter_q      = 0.707 + filter_res * 19.293;
+
+    lp = fi.resonlp(filter_cutoff, filter_q);
+    hp = fi.resonhp(filter_cutoff, filter_q);
+    bp = fi.resonbp(filter_cutoff, filter_q);
+    nt = _ <: _, fi.resonbp(filter_cutoff, filter_q) :> -;
+};
