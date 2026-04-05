@@ -9,7 +9,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#define usleep(us) Sleep((us) / 1000)
+#else
 #include <unistd.h>
+#endif
 
 #define TEST(name) printf("\n=== TEST: %s ===\n", name)
 #define PASS(name) printf("  PASS: %s\n", name)

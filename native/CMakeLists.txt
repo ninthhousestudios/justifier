@@ -127,5 +127,7 @@ target_link_libraries(test_audio PRIVATE justifier_audio)
 target_include_directories(test_audio PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
-# Link stdc++ because faust_wrapper.cpp and generated code are C++
-target_link_libraries(test_audio PRIVATE stdc++)
+# Link stdc++ on non-Windows (MSVC links C++ stdlib automatically)
+if(NOT WIN32)
+    target_link_libraries(test_audio PRIVATE stdc++)
+endif()
