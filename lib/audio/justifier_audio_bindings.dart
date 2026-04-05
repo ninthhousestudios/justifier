@@ -282,6 +282,29 @@ class JustifierAudioBindings {
       );
   late final _justifier_get_active_voice_count =
       _justifier_get_active_voice_countPtr.asFunction<int Function()>();
+
+  void justifier_voice_set_reverb_send(int voice_id, double send) {
+    return _justifier_voice_set_reverb_send(voice_id, send);
+  }
+
+  late final _justifier_voice_set_reverb_sendPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int, ffi.Float)>>(
+        'justifier_voice_set_reverb_send',
+      );
+  late final _justifier_voice_set_reverb_send =
+      _justifier_voice_set_reverb_sendPtr
+          .asFunction<void Function(int, double)>();
+
+  void justifier_set_reverb_return(double level) {
+    return _justifier_set_reverb_return(level);
+  }
+
+  late final _justifier_set_reverb_returnPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Float)>>(
+        'justifier_set_reverb_return',
+      );
+  late final _justifier_set_reverb_return = _justifier_set_reverb_returnPtr
+      .asFunction<void Function(double)>();
 }
 
 enum NativeWaveformType {

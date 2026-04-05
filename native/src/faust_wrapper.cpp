@@ -29,6 +29,7 @@
 #include "lfnoise1_dsp.cpp"
 #include "lfnoise2_dsp.cpp"
 #include "fm_dsp.cpp"
+#include "reverb_dsp.cpp"
 
 #include "faust_wrapper.h"
 
@@ -47,6 +48,7 @@ struct FaustDSP {
 };
 
 static FaustDSP g_pool[NUM_WAVEFORM_TYPES][POOL_PER_TYPE];
+static FaustDSP g_reverb;   // singleton reverb DSP (NOT in the pool)
 static int      g_sample_rate = 0;
 static bool     g_initialized = false;
 
@@ -102,6 +104,12 @@ int faust_wrapper_init(int sample_rate) {
         }
     }
 
+    // Initialize the singleton reverb DSP (not part of the voice pool)
+    g_reverb.instance = new ReverbDSP();
+    g_reverb.instance->init(sample_rate);
+    g_reverb.instance->buildUserInterface(&g_reverb.ui);
+    g_reverb.in_use = false;
+
     g_initialized = true;
     return 0;
 }
@@ -116,6 +124,11 @@ void faust_wrapper_shutdown(void) {
             g_pool[t][s].in_use   = false;
         }
     }
+
+    // Destroy the singleton reverb DSP
+    delete g_reverb.instance;
+    g_reverb.instance = nullptr;
+    g_reverb.in_use = false;
 
     g_initialized  = false;
     g_sample_rate  = 0;
@@ -175,6 +188,25 @@ void faust_wrapper_set_param(FaustDSP* dsp, const char* param_name, float value)
             }
         }
     }
+}
+
+void faust_wrapper_compute_stereo(FaustDSP* dsp, int frame_count,
+                                  float* in_L, float* in_R,
+                                  float* out_L, float* out_R) {
+    if (!dsp || !dsp->instance) return;
+    float* inputs[2]  = { in_L, in_R };
+    float* outputs[2] = { out_L, out_R };
+    dsp->instance->compute(frame_count, inputs, outputs);
+}
+
+FaustDSP* faust_wrapper_reverb_acquire(void) {
+    if (!g_initialized) return nullptr;
+    g_reverb.in_use = true;
+    return &g_reverb;
+}
+
+void faust_wrapper_reverb_release(void) {
+    g_reverb.in_use = false;
 }
 
 int faust_wrapper_get_sample_rate(void) {

@@ -92,6 +92,7 @@ class WorkspaceNotifier extends Notifier<WorkspaceState> {
           sustain: defaults.sustainLevel,
           release: defaults.releaseTime);
       _engine.setGate(engineId, true);
+      _engine.setReverbSend(engineId, defaults.reverbSend);
     }
     final voice = Voice(
       id: voiceId,
@@ -199,6 +200,9 @@ class WorkspaceNotifier extends Notifier<WorkspaceState> {
       if (updated.filterResonance != old.filterResonance) {
         _engine.setFilterResonance(eid, updated.filterResonance);
       }
+      if (updated.reverbSend != old.reverbSend) {
+        _engine.setReverbSend(eid, updated.reverbSend);
+      }
       if (updated.attackTime != old.attackTime ||
           updated.decayTime != old.decayTime ||
           updated.sustainLevel != old.sustainLevel ||
@@ -247,6 +251,11 @@ class WorkspaceNotifier extends Notifier<WorkspaceState> {
     final wave = state.waves.firstWhere((w) => w.id == waveId);
     final voice = wave.voices.firstWhere((v) => v.id == voiceId);
     updateVoice(waveId, voiceId, voice.copyWith(filterResonance: resonance));
+  }
+
+  void setReverbReturn(double level) {
+    _engine.setReverbReturn(level);
+    state = state.copyWith(reverbReturn: level);
   }
 
   void panic() {

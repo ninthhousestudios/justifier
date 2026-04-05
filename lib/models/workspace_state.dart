@@ -9,21 +9,25 @@ class WorkspaceState {
   const WorkspaceState({
     this.referenceHz = 172.8,
     this.masterVolume = 0.7,
+    this.reverbReturn = 0.3,
     this.waves = const [],
   });
 
   final double referenceHz;
   final double masterVolume;
+  final double reverbReturn;
   final List<Wave> waves;
 
   WorkspaceState copyWith({
     double? referenceHz,
     double? masterVolume,
+    double? reverbReturn,
     List<Wave>? waves,
   }) {
     return WorkspaceState(
       referenceHz: referenceHz ?? this.referenceHz,
       masterVolume: masterVolume ?? this.masterVolume,
+      reverbReturn: reverbReturn ?? this.reverbReturn,
       waves: waves ?? this.waves,
     );
   }
@@ -96,6 +100,7 @@ class Voice {
     this.filterType = 0,
     this.filterCutoff = 20000.0,
     this.filterResonance = 0.0,
+    this.reverbSend = 0.0,
   });
 
   final String id;
@@ -118,6 +123,7 @@ class Voice {
   final int filterType;         // 0=LP, 1=HP, 2=BP, 3=notch
   final double filterCutoff;    // Hz, 20..20000
   final double filterResonance; // 0.0..1.0
+  final double reverbSend;      // 0.0..1.0
 
   /// Compute the actual frequency from a reference Hz.
   double frequencyHz(double referenceHz) {
@@ -153,6 +159,7 @@ class Voice {
     int? filterType,
     double? filterCutoff,
     double? filterResonance,
+    double? reverbSend,
   }) {
     return Voice(
       id: id,
@@ -175,6 +182,7 @@ class Voice {
       filterType: filterType ?? this.filterType,
       filterCutoff: filterCutoff ?? this.filterCutoff,
       filterResonance: filterResonance ?? this.filterResonance,
+      reverbSend: reverbSend ?? this.reverbSend,
     );
   }
 }

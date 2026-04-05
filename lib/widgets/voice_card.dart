@@ -235,6 +235,16 @@ class VoiceCard extends ConsumerWidget {
             color: accentColor,
           ),
 
+          // Reverb send
+          _SliderRow(
+            label: 'rvb',
+            value: voice.reverbSend,
+            step: 0.01,
+            onChanged: (v) =>
+                _update(ref, voice.copyWith(reverbSend: v)),
+            color: accentColor,
+          ),
+
           // ADSR envelope controls
           const SizedBox(height: 2),
           _SliderRow(

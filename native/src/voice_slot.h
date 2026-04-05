@@ -46,6 +46,7 @@ typedef struct {
     float           filter_type;      // 0=LP, 1=HP, 2=BP, 3=notch
     float           filter_cutoff;    // Hz, 20..20000 (default 20000)
     float           filter_resonance; // 0.0..1.0 (default 0.0)
+    float           reverb_send;      // 0.0..1.0 (default 0.0)
 } VoiceSlot;
 
 // Control message types for SPSC queue (per D-08)
@@ -65,6 +66,8 @@ typedef enum {
     MSG_SET_FILTER_TYPE,
     MSG_SET_FILTER_CUTOFF,
     MSG_SET_FILTER_RESONANCE,
+    MSG_SET_REVERB_SEND,
+    MSG_SET_REVERB_RETURN,
 } ControlMessageType;
 
 typedef struct {

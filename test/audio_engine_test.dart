@@ -2,7 +2,7 @@ import 'dart:ffi';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:justifier/audio/audio.dart';
+import 'package:justifier/audio/waveform_type.dart';
 import 'package:justifier/audio/justifier_audio_bindings.dart';
 
 /// Path to the shared library built by native/CMakeLists.txt.
@@ -27,12 +27,17 @@ void main() {
       expect(WaveformType.saw.index, 2);
       expect(WaveformType.square.index, 3);
       expect(WaveformType.pulse.index, 4);
-      expect(WaveformType.noise.index, 5);
-      expect(WaveformType.fm.index, 6);
+      expect(WaveformType.whiteNoise.index, 5);
+      expect(WaveformType.pinkNoise.index, 6);
+      expect(WaveformType.brownNoise.index, 7);
+      expect(WaveformType.lfnoise0.index, 8);
+      expect(WaveformType.lfnoise1.index, 9);
+      expect(WaveformType.lfnoise2.index, 10);
+      expect(WaveformType.fm.index, 11);
     });
 
-    test('has 7 values', () {
-      expect(WaveformType.values.length, 7);
+    test('has 12 values', () {
+      expect(WaveformType.values.length, 12);
     });
   });
 

@@ -5,12 +5,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:justifier/audio/audio_engine.dart';
 import 'package:justifier/core/persistence.dart';
-import 'package:justifier/providers/engine-provider.dart';
-import 'package:justifier/providers/zoom-provider.dart';
-import 'package:justifier/theme/app-theme.dart';
+import 'package:justifier/providers/engine_provider.dart';
+import 'package:justifier/providers/zoom_provider.dart';
+import 'package:justifier/theme/app_theme.dart';
 import 'package:justifier/audio/waveform_type.dart';
-import 'package:justifier/providers/workspace-provider.dart';
-import 'package:justifier/widgets/app-shell.dart';
+import 'package:justifier/providers/workspace_provider.dart';
+import 'package:justifier/widgets/app_shell.dart';
 
 /// Fake AudioEngine that doesn't load the native library.
 class FakeAudioEngine implements AudioEngine {
@@ -76,6 +76,12 @@ class FakeAudioEngine implements AudioEngine {
 
   @override
   void setMasterVolume(double volume) {}
+
+  @override
+  void setReverbSend(int voiceId, double send) {}
+
+  @override
+  void setReverbReturn(double level) {}
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

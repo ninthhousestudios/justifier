@@ -278,7 +278,50 @@ int main(int argc, char* argv[]) {
         PASS("ADSR: default params work");
     }
 
-    // --- 14: Shutdown ---
+    // --- 14: Reverb send/return ---
+    TEST("Reverb send/return");
+
+    // 14a: Set reverb send on a voice
+    int vr = justifier_voice_add(WAVEFORM_SAW, 220.0f, 0.4f);
+    CHECK(vr >= 0, "reverb test voice created");
+    justifier_voice_set_gate_times(vr, 0.01f, 0.01f, 0.8f, 0.05f);
+    justifier_voice_set_reverb_send(vr, 0.7f);
+    usleep(play_ms * 1000);
+    PASS("Reverb send applied");
+
+    // 14b: Adjust reverb return level
+    justifier_set_reverb_return(0.5f);
+    usleep(play_ms * 1000);
+    PASS("Reverb return level changed");
+
+    // 14c: Zero send = dry only
+    justifier_voice_set_reverb_send(vr, 0.0f);
+    usleep(play_ms * 1000);
+    PASS("Zero send = dry signal");
+
+    // 14d: Full send
+    justifier_voice_set_reverb_send(vr, 1.0f);
+    usleep(play_ms * 1000);
+    PASS("Full reverb send");
+
+    // 14e: Invalid voice IDs — must not crash
+    justifier_voice_set_reverb_send(-1, 0.5f);
+    justifier_voice_set_reverb_send(99, 0.5f);
+    usleep(100 * 1000);
+    PASS("Invalid reverb send voice IDs handled safely");
+
+    // 14f: Reverb tail persists after voice removal
+    justifier_voice_set_reverb_send(vr, 1.0f);
+    justifier_set_reverb_return(0.8f);
+    usleep(play_ms * 1000);
+    justifier_voice_remove(vr);
+    usleep(play_ms * 1000);  // reverb tail should still be audible
+    PASS("Reverb tail persists after voice removal");
+    justifier_set_reverb_return(0.3f);  // restore default
+    usleep(600 * 1000);
+    PASS("Reverb send/return tests complete");
+
+    // --- 15: Shutdown ---
     TEST("Shutdown");
     int xruns = justifier_get_xrun_count();
     justifier_shutdown();

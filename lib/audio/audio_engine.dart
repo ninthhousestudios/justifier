@@ -82,6 +82,16 @@ class AudioEngine {
       _bindings.justifier_voice_set_filter_resonance(voiceId, resonance);
 
   // ---------------------------------------------------------------------------
+  // Reverb send/return
+  // ---------------------------------------------------------------------------
+
+  void setReverbSend(int voiceId, double send) =>
+      _bindings.justifier_voice_set_reverb_send(voiceId, send);
+
+  void setReverbReturn(double level) =>
+      _bindings.justifier_set_reverb_return(level);
+
+  // ---------------------------------------------------------------------------
   // Gate (envelope control)
   // ---------------------------------------------------------------------------
 

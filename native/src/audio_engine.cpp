@@ -35,6 +35,8 @@ typedef struct {
     std::atomic<int>  xrun_count;
     std::atomic<int>  active_voice_count;
     float           master_volume;
+    FaustDSP*       reverb_dsp;        // singleton from faust_wrapper
+    float           reverb_return_level; // 0.0..1.0, default 0.3
     int             sample_rate;
     int             buffer_size;
     bool            running;
@@ -72,6 +74,7 @@ static void apply_control_message(AudioEngine* eng, const ControlMessage* msg) {
             slot->filter_type      = 0.0f;      // LP
             slot->filter_cutoff    = 20000.0f;   // effectively bypass
             slot->filter_resonance = 0.0f;
+            slot->reverb_send      = 0.0f;
             slot->dsp_pending = NULL;
             slot->crossfade_samples_remaining = 0;
             slot->crossfade_gain = 0.0f;
@@ -272,6 +275,17 @@ static void apply_control_message(AudioEngine* eng, const ControlMessage* msg) {
                 faust_wrapper_set_param(slot->dsp_pending, "filter_res", slot->filter_resonance);
             break;
         }
+
+        case MSG_SET_REVERB_SEND: {
+            if (id < 0 || id >= MAX_VOICES) break;
+            eng->voices[id].reverb_send = msg->float_value;
+            break;
+        }
+
+        case MSG_SET_REVERB_RETURN: {
+            eng->reverb_return_level = msg->float_value;
+            break;
+        }
     }
 }
 
@@ -302,6 +316,13 @@ static void audio_callback(ma_device* device, void* output,
 
     // 4. Per-voice mono compute buffer (stack — no allocation)
     float tmp[JUSTIFIER_MAX_BUFFER_SIZE];
+
+    // 4b. Send bus buffers (stack-allocated stereo pair)
+    float send_L[JUSTIFIER_MAX_BUFFER_SIZE];
+    float send_R[JUSTIFIER_MAX_BUFFER_SIZE];
+    memset(send_L, 0, frame_count * sizeof(float));
+    memset(send_R, 0, frame_count * sizeof(float));
+    bool send_bus_active = false;
 
     // 5. Mix all active voices
     for (int i = 0; i < MAX_VOICES; i++) {
@@ -334,6 +355,12 @@ static void audio_callback(ma_device* device, void* output,
                 float sample = tmp_old[s] * (1.0f - progress) + tmp_new[s] * progress;
                 out[s * 2]     += sample * amp_L * eng->master_volume;
                 out[s * 2 + 1] += sample * amp_R * eng->master_volume;
+
+                if (slot->reverb_send > 0.0f) {
+                    send_bus_active = true;
+                    send_L[s] += sample * slot->reverb_send * (1.0f - slot->pan) * 0.5f;
+                    send_R[s] += sample * slot->reverb_send * (1.0f + slot->pan) * 0.5f;
+                }
             }
 
             slot->crossfade_samples_remaining = xfade_remaining;
@@ -356,6 +383,16 @@ static void audio_callback(ma_device* device, void* output,
                 out[s * 2 + 1] += tmp[s] * amp_R * eng->master_volume;
             }
 
+            if (slot->reverb_send > 0.0f) {
+                send_bus_active = true;
+                float send_L_gain = slot->reverb_send * (1.0f - slot->pan) * 0.5f;
+                float send_R_gain = slot->reverb_send * (1.0f + slot->pan) * 0.5f;
+                for (ma_uint32 s = 0; s < frame_count; s++) {
+                    send_L[s] += tmp[s] * send_L_gain;
+                    send_R[s] += tmp[s] * send_R_gain;
+                }
+            }
+
             slot->release_samples_remaining -= (int)frame_count;
             if (slot->release_samples_remaining <= 0) {
                 faust_wrapper_release(slot->dsp);
@@ -374,6 +411,29 @@ static void audio_callback(ma_device* device, void* output,
                 out[s * 2]     += tmp[s] * amp_L * eng->master_volume;
                 out[s * 2 + 1] += tmp[s] * amp_R * eng->master_volume;
             }
+
+            if (slot->reverb_send > 0.0f) {
+                send_bus_active = true;
+                float send_L_gain = slot->reverb_send * (1.0f - slot->pan) * 0.5f;
+                float send_R_gain = slot->reverb_send * (1.0f + slot->pan) * 0.5f;
+                for (ma_uint32 s = 0; s < frame_count; s++) {
+                    send_L[s] += tmp[s] * send_L_gain;
+                    send_R[s] += tmp[s] * send_R_gain;
+                }
+            }
+        }
+    }
+
+    // 6. Process reverb send bus (skip if no voice sent signal)
+    if (send_bus_active && eng->reverb_dsp && eng->reverb_return_level > 0.0f) {
+        float ret_L[JUSTIFIER_MAX_BUFFER_SIZE];
+        float ret_R[JUSTIFIER_MAX_BUFFER_SIZE];
+        faust_wrapper_compute_stereo(eng->reverb_dsp, (int)frame_count,
+                                     send_L, send_R, ret_L, ret_R);
+        float wet = eng->reverb_return_level * eng->master_volume;
+        for (ma_uint32 s = 0; s < frame_count; s++) {
+            out[s * 2]     += ret_L[s] * wet;
+            out[s * 2 + 1] += ret_R[s] * wet;
         }
     }
 }
@@ -403,6 +463,9 @@ int justifier_init(int sample_rate, int buffer_size) {
         fprintf(stderr, "justifier_init: faust_wrapper_init failed\n");
         return -1;
     }
+
+    g_engine.reverb_dsp = faust_wrapper_reverb_acquire();
+    g_engine.reverb_return_level = 0.3f;
 
     g_engine.control_queue =
         new moodycamel::ReaderWriterQueue<ControlMessage>(1024);
@@ -449,6 +512,9 @@ void justifier_shutdown(void) {
             g_engine.voices[i].dsp_pending = NULL;
         }
     }
+
+    faust_wrapper_reverb_release();
+    g_engine.reverb_dsp = NULL;
 
     faust_wrapper_shutdown();
     delete g_engine.control_queue;
@@ -621,6 +687,24 @@ void justifier_voice_set_filter_resonance(int voice_id, float resonance) {
     msg.type        = MSG_SET_FILTER_RESONANCE;
     msg.voice_id    = voice_id;
     msg.float_value = resonance;
+    g_engine.control_queue->enqueue(msg);
+}
+
+void justifier_voice_set_reverb_send(int voice_id, float send) {
+    if (!g_engine.running) return;
+    ControlMessage msg = {};
+    msg.type        = MSG_SET_REVERB_SEND;
+    msg.voice_id    = voice_id;
+    msg.float_value = (send < 0.0f) ? 0.0f : (send > 1.0f) ? 1.0f : send;
+    g_engine.control_queue->enqueue(msg);
+}
+
+void justifier_set_reverb_return(float level) {
+    if (!g_engine.running) return;
+    ControlMessage msg = {};
+    msg.type        = MSG_SET_REVERB_RETURN;
+    msg.voice_id    = -1;
+    msg.float_value = (level < 0.0f) ? 0.0f : (level > 1.0f) ? 1.0f : level;
     g_engine.control_queue->enqueue(msg);
 }
 

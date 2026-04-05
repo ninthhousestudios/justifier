@@ -38,6 +38,15 @@ void faust_wrapper_compute(FaustDSP* dsp, int frame_count, float* output);
 // Safe to call from the audio thread.
 void faust_wrapper_set_param(FaustDSP* dsp, const char* param_name, float value);
 
+// Run stereo DSP compute (2-in, 2-out). For effect processors.
+void faust_wrapper_compute_stereo(FaustDSP* dsp, int frame_count,
+                                  float* in_L, float* in_R,
+                                  float* out_L, float* out_R);
+
+// Acquire/release the singleton reverb DSP instance.
+FaustDSP* faust_wrapper_reverb_acquire(void);
+void faust_wrapper_reverb_release(void);
+
 // Return the sample rate the wrapper was initialized with.
 int faust_wrapper_get_sample_rate(void);
 
