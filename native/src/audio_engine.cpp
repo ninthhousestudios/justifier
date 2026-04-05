@@ -37,6 +37,18 @@ typedef struct {
     float           master_volume;
     FaustDSP*       reverb_dsp;        // singleton from faust_wrapper
     float           reverb_return_level; // 0.0..1.0, default 0.3
+    FaustDSP*       delay_dsp;
+    float           delay_return_level;
+    FaustDSP*       chorus_dsp;
+    float           chorus_return_level;
+    FaustDSP*       phaser_dsp;
+    float           phaser_return_level;
+    FaustDSP*       flanger_dsp;
+    float           flanger_return_level;
+    FaustDSP*       eq_dsp;
+    float           eq_return_level;
+    FaustDSP*       saturation_dsp;
+    float           saturation_return_level;
     int             sample_rate;
     int             buffer_size;
     bool            running;
@@ -75,6 +87,12 @@ static void apply_control_message(AudioEngine* eng, const ControlMessage* msg) {
             slot->filter_cutoff    = 20000.0f;   // effectively bypass
             slot->filter_resonance = 0.0f;
             slot->reverb_send      = 0.0f;
+            slot->delay_send       = 0.0f;
+            slot->chorus_send      = 0.0f;
+            slot->phaser_send      = 0.0f;
+            slot->flanger_send     = 0.0f;
+            slot->eq_send          = 0.0f;
+            slot->saturation_send  = 0.0f;
             slot->dsp_pending = NULL;
             slot->crossfade_samples_remaining = 0;
             slot->crossfade_gain = 0.0f;
@@ -286,6 +304,61 @@ static void apply_control_message(AudioEngine* eng, const ControlMessage* msg) {
             eng->reverb_return_level = msg->float_value;
             break;
         }
+
+        case MSG_SET_DELAY_SEND: {
+            if (id < 0 || id >= MAX_VOICES) break;
+            eng->voices[id].delay_send = msg->float_value;
+            break;
+        }
+        case MSG_SET_DELAY_RETURN: {
+            eng->delay_return_level = msg->float_value;
+            break;
+        }
+        case MSG_SET_CHORUS_SEND: {
+            if (id < 0 || id >= MAX_VOICES) break;
+            eng->voices[id].chorus_send = msg->float_value;
+            break;
+        }
+        case MSG_SET_CHORUS_RETURN: {
+            eng->chorus_return_level = msg->float_value;
+            break;
+        }
+        case MSG_SET_PHASER_SEND: {
+            if (id < 0 || id >= MAX_VOICES) break;
+            eng->voices[id].phaser_send = msg->float_value;
+            break;
+        }
+        case MSG_SET_PHASER_RETURN: {
+            eng->phaser_return_level = msg->float_value;
+            break;
+        }
+        case MSG_SET_FLANGER_SEND: {
+            if (id < 0 || id >= MAX_VOICES) break;
+            eng->voices[id].flanger_send = msg->float_value;
+            break;
+        }
+        case MSG_SET_FLANGER_RETURN: {
+            eng->flanger_return_level = msg->float_value;
+            break;
+        }
+        case MSG_SET_EQ_SEND: {
+            if (id < 0 || id >= MAX_VOICES) break;
+            eng->voices[id].eq_send = msg->float_value;
+            break;
+        }
+        case MSG_SET_EQ_RETURN: {
+            eng->eq_return_level = msg->float_value;
+            break;
+        }
+        case MSG_SET_SATURATION_SEND: {
+            if (id < 0 || id >= MAX_VOICES) break;
+            eng->voices[id].saturation_send = msg->float_value;
+            break;
+        }
+        case MSG_SET_SATURATION_RETURN: {
+            eng->saturation_return_level = msg->float_value;
+            break;
+        }
     }
 }
 
@@ -317,12 +390,43 @@ static void audio_callback(ma_device* device, void* output,
     // 4. Per-voice mono compute buffer (stack — no allocation)
     float tmp[JUSTIFIER_MAX_BUFFER_SIZE];
 
-    // 4b. Send bus buffers (stack-allocated stereo pair)
-    float send_L[JUSTIFIER_MAX_BUFFER_SIZE];
-    float send_R[JUSTIFIER_MAX_BUFFER_SIZE];
-    memset(send_L, 0, frame_count * sizeof(float));
-    memset(send_R, 0, frame_count * sizeof(float));
-    bool send_bus_active = false;
+    // 4b. Send bus buffers — one stereo pair per effect (stack-allocated)
+    // 7 effects * 2 channels * 4096 samples * 4 bytes = 224 KB max
+    float send_reverb_L[JUSTIFIER_MAX_BUFFER_SIZE];
+    float send_reverb_R[JUSTIFIER_MAX_BUFFER_SIZE];
+    float send_delay_L[JUSTIFIER_MAX_BUFFER_SIZE];
+    float send_delay_R[JUSTIFIER_MAX_BUFFER_SIZE];
+    float send_chorus_L[JUSTIFIER_MAX_BUFFER_SIZE];
+    float send_chorus_R[JUSTIFIER_MAX_BUFFER_SIZE];
+    float send_phaser_L[JUSTIFIER_MAX_BUFFER_SIZE];
+    float send_phaser_R[JUSTIFIER_MAX_BUFFER_SIZE];
+    float send_flanger_L[JUSTIFIER_MAX_BUFFER_SIZE];
+    float send_flanger_R[JUSTIFIER_MAX_BUFFER_SIZE];
+    float send_eq_L[JUSTIFIER_MAX_BUFFER_SIZE];
+    float send_eq_R[JUSTIFIER_MAX_BUFFER_SIZE];
+    float send_sat_L[JUSTIFIER_MAX_BUFFER_SIZE];
+    float send_sat_R[JUSTIFIER_MAX_BUFFER_SIZE];
+    memset(send_reverb_L, 0, frame_count * sizeof(float));
+    memset(send_reverb_R, 0, frame_count * sizeof(float));
+    memset(send_delay_L, 0, frame_count * sizeof(float));
+    memset(send_delay_R, 0, frame_count * sizeof(float));
+    memset(send_chorus_L, 0, frame_count * sizeof(float));
+    memset(send_chorus_R, 0, frame_count * sizeof(float));
+    memset(send_phaser_L, 0, frame_count * sizeof(float));
+    memset(send_phaser_R, 0, frame_count * sizeof(float));
+    memset(send_flanger_L, 0, frame_count * sizeof(float));
+    memset(send_flanger_R, 0, frame_count * sizeof(float));
+    memset(send_eq_L, 0, frame_count * sizeof(float));
+    memset(send_eq_R, 0, frame_count * sizeof(float));
+    memset(send_sat_L, 0, frame_count * sizeof(float));
+    memset(send_sat_R, 0, frame_count * sizeof(float));
+    bool send_reverb_active = false;
+    bool send_delay_active = false;
+    bool send_chorus_active = false;
+    bool send_phaser_active = false;
+    bool send_flanger_active = false;
+    bool send_eq_active = false;
+    bool send_sat_active = false;
 
     // 5. Mix all active voices
     for (int i = 0; i < MAX_VOICES; i++) {
@@ -356,11 +460,21 @@ static void audio_callback(ma_device* device, void* output,
                 out[s * 2]     += sample * amp_L * eng->master_volume;
                 out[s * 2 + 1] += sample * amp_R * eng->master_volume;
 
-                if (slot->reverb_send > 0.0f) {
-                    send_bus_active = true;
-                    send_L[s] += sample * slot->reverb_send * (1.0f - slot->pan) * 0.5f;
-                    send_R[s] += sample * slot->reverb_send * (1.0f + slot->pan) * 0.5f;
-                }
+                // Accumulate effect sends
+                #define ACCUM_SEND_SAMPLE(field, bus_L, bus_R, active_flag) \
+                    if (slot->field > 0.0f) { \
+                        active_flag = true; \
+                        bus_L[s] += sample * slot->field * (1.0f - slot->pan) * 0.5f; \
+                        bus_R[s] += sample * slot->field * (1.0f + slot->pan) * 0.5f; \
+                    }
+                ACCUM_SEND_SAMPLE(reverb_send,     send_reverb_L,  send_reverb_R,  send_reverb_active)
+                ACCUM_SEND_SAMPLE(delay_send,      send_delay_L,   send_delay_R,   send_delay_active)
+                ACCUM_SEND_SAMPLE(chorus_send,     send_chorus_L,  send_chorus_R,  send_chorus_active)
+                ACCUM_SEND_SAMPLE(phaser_send,     send_phaser_L,  send_phaser_R,  send_phaser_active)
+                ACCUM_SEND_SAMPLE(flanger_send,    send_flanger_L, send_flanger_R, send_flanger_active)
+                ACCUM_SEND_SAMPLE(eq_send,         send_eq_L,      send_eq_R,      send_eq_active)
+                ACCUM_SEND_SAMPLE(saturation_send, send_sat_L,     send_sat_R,     send_sat_active)
+                #undef ACCUM_SEND_SAMPLE
             }
 
             slot->crossfade_samples_remaining = xfade_remaining;
@@ -383,15 +497,25 @@ static void audio_callback(ma_device* device, void* output,
                 out[s * 2 + 1] += tmp[s] * amp_R * eng->master_volume;
             }
 
-            if (slot->reverb_send > 0.0f) {
-                send_bus_active = true;
-                float send_L_gain = slot->reverb_send * (1.0f - slot->pan) * 0.5f;
-                float send_R_gain = slot->reverb_send * (1.0f + slot->pan) * 0.5f;
-                for (ma_uint32 s = 0; s < frame_count; s++) {
-                    send_L[s] += tmp[s] * send_L_gain;
-                    send_R[s] += tmp[s] * send_R_gain;
+            // Accumulate effect sends for releasing voice
+            #define ACCUM_SEND_BLOCK(field, bus_L, bus_R, active_flag) \
+                if (slot->field > 0.0f) { \
+                    active_flag = true; \
+                    float sL = slot->field * (1.0f - slot->pan) * 0.5f; \
+                    float sR = slot->field * (1.0f + slot->pan) * 0.5f; \
+                    for (ma_uint32 s = 0; s < frame_count; s++) { \
+                        bus_L[s] += tmp[s] * sL; \
+                        bus_R[s] += tmp[s] * sR; \
+                    } \
                 }
-            }
+            ACCUM_SEND_BLOCK(reverb_send,     send_reverb_L,  send_reverb_R,  send_reverb_active)
+            ACCUM_SEND_BLOCK(delay_send,      send_delay_L,   send_delay_R,   send_delay_active)
+            ACCUM_SEND_BLOCK(chorus_send,     send_chorus_L,  send_chorus_R,  send_chorus_active)
+            ACCUM_SEND_BLOCK(phaser_send,     send_phaser_L,  send_phaser_R,  send_phaser_active)
+            ACCUM_SEND_BLOCK(flanger_send,    send_flanger_L, send_flanger_R, send_flanger_active)
+            ACCUM_SEND_BLOCK(eq_send,         send_eq_L,      send_eq_R,      send_eq_active)
+            ACCUM_SEND_BLOCK(saturation_send, send_sat_L,     send_sat_R,     send_sat_active)
+            #undef ACCUM_SEND_BLOCK
 
             slot->release_samples_remaining -= (int)frame_count;
             if (slot->release_samples_remaining <= 0) {
@@ -412,30 +536,49 @@ static void audio_callback(ma_device* device, void* output,
                 out[s * 2 + 1] += tmp[s] * amp_R * eng->master_volume;
             }
 
-            if (slot->reverb_send > 0.0f) {
-                send_bus_active = true;
-                float send_L_gain = slot->reverb_send * (1.0f - slot->pan) * 0.5f;
-                float send_R_gain = slot->reverb_send * (1.0f + slot->pan) * 0.5f;
-                for (ma_uint32 s = 0; s < frame_count; s++) {
-                    send_L[s] += tmp[s] * send_L_gain;
-                    send_R[s] += tmp[s] * send_R_gain;
+            // Accumulate effect sends for active voice
+            #define ACCUM_SEND_BLOCK(field, bus_L, bus_R, active_flag) \
+                if (slot->field > 0.0f) { \
+                    active_flag = true; \
+                    float sL = slot->field * (1.0f - slot->pan) * 0.5f; \
+                    float sR = slot->field * (1.0f + slot->pan) * 0.5f; \
+                    for (ma_uint32 s = 0; s < frame_count; s++) { \
+                        bus_L[s] += tmp[s] * sL; \
+                        bus_R[s] += tmp[s] * sR; \
+                    } \
                 }
-            }
+            ACCUM_SEND_BLOCK(reverb_send,     send_reverb_L,  send_reverb_R,  send_reverb_active)
+            ACCUM_SEND_BLOCK(delay_send,      send_delay_L,   send_delay_R,   send_delay_active)
+            ACCUM_SEND_BLOCK(chorus_send,     send_chorus_L,  send_chorus_R,  send_chorus_active)
+            ACCUM_SEND_BLOCK(phaser_send,     send_phaser_L,  send_phaser_R,  send_phaser_active)
+            ACCUM_SEND_BLOCK(flanger_send,    send_flanger_L, send_flanger_R, send_flanger_active)
+            ACCUM_SEND_BLOCK(eq_send,         send_eq_L,      send_eq_R,      send_eq_active)
+            ACCUM_SEND_BLOCK(saturation_send, send_sat_L,     send_sat_R,     send_sat_active)
+            #undef ACCUM_SEND_BLOCK
         }
     }
 
-    // 6. Process reverb send bus (skip if no voice sent signal)
-    if (send_bus_active && eng->reverb_dsp && eng->reverb_return_level > 0.0f) {
-        float ret_L[JUSTIFIER_MAX_BUFFER_SIZE];
-        float ret_R[JUSTIFIER_MAX_BUFFER_SIZE];
-        faust_wrapper_compute_stereo(eng->reverb_dsp, (int)frame_count,
-                                     send_L, send_R, ret_L, ret_R);
-        float wet = eng->reverb_return_level * eng->master_volume;
-        for (ma_uint32 s = 0; s < frame_count; s++) {
-            out[s * 2]     += ret_L[s] * wet;
-            out[s * 2 + 1] += ret_R[s] * wet;
+    // 6. Process effect send buses (each skipped when inactive)
+    #define PROCESS_EFFECT(active, dsp_ptr, return_level, sL, sR) \
+        if (active && dsp_ptr && return_level > 0.0f) { \
+            float ret_L[JUSTIFIER_MAX_BUFFER_SIZE]; \
+            float ret_R[JUSTIFIER_MAX_BUFFER_SIZE]; \
+            faust_wrapper_compute_stereo(dsp_ptr, (int)frame_count, \
+                                         sL, sR, ret_L, ret_R); \
+            float wet = return_level * eng->master_volume; \
+            for (ma_uint32 s = 0; s < frame_count; s++) { \
+                out[s * 2]     += ret_L[s] * wet; \
+                out[s * 2 + 1] += ret_R[s] * wet; \
+            } \
         }
-    }
+    PROCESS_EFFECT(send_reverb_active,  eng->reverb_dsp,     eng->reverb_return_level,     send_reverb_L,  send_reverb_R)
+    PROCESS_EFFECT(send_delay_active,   eng->delay_dsp,      eng->delay_return_level,      send_delay_L,   send_delay_R)
+    PROCESS_EFFECT(send_chorus_active,  eng->chorus_dsp,     eng->chorus_return_level,     send_chorus_L,  send_chorus_R)
+    PROCESS_EFFECT(send_phaser_active,  eng->phaser_dsp,     eng->phaser_return_level,     send_phaser_L,  send_phaser_R)
+    PROCESS_EFFECT(send_flanger_active, eng->flanger_dsp,    eng->flanger_return_level,    send_flanger_L, send_flanger_R)
+    PROCESS_EFFECT(send_eq_active,      eng->eq_dsp,         eng->eq_return_level,         send_eq_L,      send_eq_R)
+    PROCESS_EFFECT(send_sat_active,     eng->saturation_dsp, eng->saturation_return_level, send_sat_L,     send_sat_R)
+    #undef PROCESS_EFFECT
 }
 
 // ---------------------------------------------------------------------------
@@ -466,6 +609,18 @@ int justifier_init(int sample_rate, int buffer_size) {
 
     g_engine.reverb_dsp = faust_wrapper_reverb_acquire();
     g_engine.reverb_return_level = 0.3f;
+    g_engine.delay_dsp = faust_wrapper_delay_acquire();
+    g_engine.delay_return_level = 0.3f;
+    g_engine.chorus_dsp = faust_wrapper_chorus_acquire();
+    g_engine.chorus_return_level = 0.3f;
+    g_engine.phaser_dsp = faust_wrapper_phaser_acquire();
+    g_engine.phaser_return_level = 0.3f;
+    g_engine.flanger_dsp = faust_wrapper_flanger_acquire();
+    g_engine.flanger_return_level = 0.3f;
+    g_engine.eq_dsp = faust_wrapper_eq_acquire();
+    g_engine.eq_return_level = 0.3f;
+    g_engine.saturation_dsp = faust_wrapper_saturation_acquire();
+    g_engine.saturation_return_level = 0.3f;
 
     g_engine.control_queue =
         new moodycamel::ReaderWriterQueue<ControlMessage>(1024);
@@ -515,6 +670,18 @@ void justifier_shutdown(void) {
 
     faust_wrapper_reverb_release();
     g_engine.reverb_dsp = NULL;
+    faust_wrapper_delay_release();
+    g_engine.delay_dsp = NULL;
+    faust_wrapper_chorus_release();
+    g_engine.chorus_dsp = NULL;
+    faust_wrapper_phaser_release();
+    g_engine.phaser_dsp = NULL;
+    faust_wrapper_flanger_release();
+    g_engine.flanger_dsp = NULL;
+    faust_wrapper_eq_release();
+    g_engine.eq_dsp = NULL;
+    faust_wrapper_saturation_release();
+    g_engine.saturation_dsp = NULL;
 
     faust_wrapper_shutdown();
     delete g_engine.control_queue;
@@ -703,6 +870,126 @@ void justifier_set_reverb_return(float level) {
     if (!g_engine.running) return;
     ControlMessage msg = {};
     msg.type        = MSG_SET_REVERB_RETURN;
+    msg.voice_id    = -1;
+    msg.float_value = (level < 0.0f) ? 0.0f : (level > 1.0f) ? 1.0f : level;
+    g_engine.control_queue->enqueue(msg);
+}
+
+// --- Delay ---
+
+void justifier_voice_set_delay_send(int voice_id, float send) {
+    if (!g_engine.running) return;
+    ControlMessage msg = {};
+    msg.type        = MSG_SET_DELAY_SEND;
+    msg.voice_id    = voice_id;
+    msg.float_value = (send < 0.0f) ? 0.0f : (send > 1.0f) ? 1.0f : send;
+    g_engine.control_queue->enqueue(msg);
+}
+
+void justifier_set_delay_return(float level) {
+    if (!g_engine.running) return;
+    ControlMessage msg = {};
+    msg.type        = MSG_SET_DELAY_RETURN;
+    msg.voice_id    = -1;
+    msg.float_value = (level < 0.0f) ? 0.0f : (level > 1.0f) ? 1.0f : level;
+    g_engine.control_queue->enqueue(msg);
+}
+
+// --- Chorus ---
+
+void justifier_voice_set_chorus_send(int voice_id, float send) {
+    if (!g_engine.running) return;
+    ControlMessage msg = {};
+    msg.type        = MSG_SET_CHORUS_SEND;
+    msg.voice_id    = voice_id;
+    msg.float_value = (send < 0.0f) ? 0.0f : (send > 1.0f) ? 1.0f : send;
+    g_engine.control_queue->enqueue(msg);
+}
+
+void justifier_set_chorus_return(float level) {
+    if (!g_engine.running) return;
+    ControlMessage msg = {};
+    msg.type        = MSG_SET_CHORUS_RETURN;
+    msg.voice_id    = -1;
+    msg.float_value = (level < 0.0f) ? 0.0f : (level > 1.0f) ? 1.0f : level;
+    g_engine.control_queue->enqueue(msg);
+}
+
+// --- Phaser ---
+
+void justifier_voice_set_phaser_send(int voice_id, float send) {
+    if (!g_engine.running) return;
+    ControlMessage msg = {};
+    msg.type        = MSG_SET_PHASER_SEND;
+    msg.voice_id    = voice_id;
+    msg.float_value = (send < 0.0f) ? 0.0f : (send > 1.0f) ? 1.0f : send;
+    g_engine.control_queue->enqueue(msg);
+}
+
+void justifier_set_phaser_return(float level) {
+    if (!g_engine.running) return;
+    ControlMessage msg = {};
+    msg.type        = MSG_SET_PHASER_RETURN;
+    msg.voice_id    = -1;
+    msg.float_value = (level < 0.0f) ? 0.0f : (level > 1.0f) ? 1.0f : level;
+    g_engine.control_queue->enqueue(msg);
+}
+
+// --- Flanger ---
+
+void justifier_voice_set_flanger_send(int voice_id, float send) {
+    if (!g_engine.running) return;
+    ControlMessage msg = {};
+    msg.type        = MSG_SET_FLANGER_SEND;
+    msg.voice_id    = voice_id;
+    msg.float_value = (send < 0.0f) ? 0.0f : (send > 1.0f) ? 1.0f : send;
+    g_engine.control_queue->enqueue(msg);
+}
+
+void justifier_set_flanger_return(float level) {
+    if (!g_engine.running) return;
+    ControlMessage msg = {};
+    msg.type        = MSG_SET_FLANGER_RETURN;
+    msg.voice_id    = -1;
+    msg.float_value = (level < 0.0f) ? 0.0f : (level > 1.0f) ? 1.0f : level;
+    g_engine.control_queue->enqueue(msg);
+}
+
+// --- Parametric EQ ---
+
+void justifier_voice_set_eq_send(int voice_id, float send) {
+    if (!g_engine.running) return;
+    ControlMessage msg = {};
+    msg.type        = MSG_SET_EQ_SEND;
+    msg.voice_id    = voice_id;
+    msg.float_value = (send < 0.0f) ? 0.0f : (send > 1.0f) ? 1.0f : send;
+    g_engine.control_queue->enqueue(msg);
+}
+
+void justifier_set_eq_return(float level) {
+    if (!g_engine.running) return;
+    ControlMessage msg = {};
+    msg.type        = MSG_SET_EQ_RETURN;
+    msg.voice_id    = -1;
+    msg.float_value = (level < 0.0f) ? 0.0f : (level > 1.0f) ? 1.0f : level;
+    g_engine.control_queue->enqueue(msg);
+}
+
+// --- Saturation ---
+
+void justifier_voice_set_saturation_send(int voice_id, float send) {
+    if (!g_engine.running) return;
+    ControlMessage msg = {};
+    msg.type        = MSG_SET_SATURATION_SEND;
+    msg.voice_id    = voice_id;
+    msg.float_value = (send < 0.0f) ? 0.0f : (send > 1.0f) ? 1.0f : send;
+    g_engine.control_queue->enqueue(msg);
+}
+
+void justifier_set_saturation_return(float level) {
+    if (!g_engine.running) return;
+    ControlMessage msg = {};
+    msg.type        = MSG_SET_SATURATION_RETURN;
     msg.voice_id    = -1;
     msg.float_value = (level < 0.0f) ? 0.0f : (level > 1.0f) ? 1.0f : level;
     g_engine.control_queue->enqueue(msg);

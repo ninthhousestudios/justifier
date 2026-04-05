@@ -93,6 +93,12 @@ class WorkspaceNotifier extends Notifier<WorkspaceState> {
           release: defaults.releaseTime);
       _engine.setGate(engineId, true);
       _engine.setReverbSend(engineId, defaults.reverbSend);
+      _engine.setDelaySend(engineId, defaults.delaySend);
+      _engine.setChorusSend(engineId, defaults.chorusSend);
+      _engine.setPhaserSend(engineId, defaults.phaserSend);
+      _engine.setFlangerSend(engineId, defaults.flangerSend);
+      _engine.setEqSend(engineId, defaults.eqSend);
+      _engine.setSaturationSend(engineId, defaults.saturationSend);
     }
     final voice = Voice(
       id: voiceId,
@@ -202,6 +208,24 @@ class WorkspaceNotifier extends Notifier<WorkspaceState> {
       }
       if (updated.reverbSend != old.reverbSend) {
         _engine.setReverbSend(eid, updated.reverbSend);
+      }
+      if (updated.delaySend != old.delaySend) {
+        _engine.setDelaySend(eid, updated.delaySend);
+      }
+      if (updated.chorusSend != old.chorusSend) {
+        _engine.setChorusSend(eid, updated.chorusSend);
+      }
+      if (updated.phaserSend != old.phaserSend) {
+        _engine.setPhaserSend(eid, updated.phaserSend);
+      }
+      if (updated.flangerSend != old.flangerSend) {
+        _engine.setFlangerSend(eid, updated.flangerSend);
+      }
+      if (updated.eqSend != old.eqSend) {
+        _engine.setEqSend(eid, updated.eqSend);
+      }
+      if (updated.saturationSend != old.saturationSend) {
+        _engine.setSaturationSend(eid, updated.saturationSend);
       }
       if (updated.attackTime != old.attackTime ||
           updated.decayTime != old.decayTime ||

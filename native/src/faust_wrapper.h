@@ -43,9 +43,27 @@ void faust_wrapper_compute_stereo(FaustDSP* dsp, int frame_count,
                                   float* in_L, float* in_R,
                                   float* out_L, float* out_R);
 
-// Acquire/release the singleton reverb DSP instance.
+// Acquire/release singleton effect DSP instances.
 FaustDSP* faust_wrapper_reverb_acquire(void);
 void faust_wrapper_reverb_release(void);
+
+FaustDSP* faust_wrapper_delay_acquire(void);
+void faust_wrapper_delay_release(void);
+
+FaustDSP* faust_wrapper_chorus_acquire(void);
+void faust_wrapper_chorus_release(void);
+
+FaustDSP* faust_wrapper_phaser_acquire(void);
+void faust_wrapper_phaser_release(void);
+
+FaustDSP* faust_wrapper_flanger_acquire(void);
+void faust_wrapper_flanger_release(void);
+
+FaustDSP* faust_wrapper_eq_acquire(void);
+void faust_wrapper_eq_release(void);
+
+FaustDSP* faust_wrapper_saturation_acquire(void);
+void faust_wrapper_saturation_release(void);
 
 // Return the sample rate the wrapper was initialized with.
 int faust_wrapper_get_sample_rate(void);

@@ -10,24 +10,48 @@ class WorkspaceState {
     this.referenceHz = 172.8,
     this.masterVolume = 0.7,
     this.reverbReturn = 0.3,
+    this.delayReturn = 0.3,
+    this.chorusReturn = 0.3,
+    this.phaserReturn = 0.3,
+    this.flangerReturn = 0.3,
+    this.eqReturn = 0.3,
+    this.saturationReturn = 0.3,
     this.waves = const [],
   });
 
   final double referenceHz;
   final double masterVolume;
   final double reverbReturn;
+  final double delayReturn;
+  final double chorusReturn;
+  final double phaserReturn;
+  final double flangerReturn;
+  final double eqReturn;
+  final double saturationReturn;
   final List<Wave> waves;
 
   WorkspaceState copyWith({
     double? referenceHz,
     double? masterVolume,
     double? reverbReturn,
+    double? delayReturn,
+    double? chorusReturn,
+    double? phaserReturn,
+    double? flangerReturn,
+    double? eqReturn,
+    double? saturationReturn,
     List<Wave>? waves,
   }) {
     return WorkspaceState(
       referenceHz: referenceHz ?? this.referenceHz,
       masterVolume: masterVolume ?? this.masterVolume,
       reverbReturn: reverbReturn ?? this.reverbReturn,
+      delayReturn: delayReturn ?? this.delayReturn,
+      chorusReturn: chorusReturn ?? this.chorusReturn,
+      phaserReturn: phaserReturn ?? this.phaserReturn,
+      flangerReturn: flangerReturn ?? this.flangerReturn,
+      eqReturn: eqReturn ?? this.eqReturn,
+      saturationReturn: saturationReturn ?? this.saturationReturn,
       waves: waves ?? this.waves,
     );
   }
@@ -101,6 +125,12 @@ class Voice {
     this.filterCutoff = 20000.0,
     this.filterResonance = 0.0,
     this.reverbSend = 0.0,
+    this.delaySend = 0.0,
+    this.chorusSend = 0.0,
+    this.phaserSend = 0.0,
+    this.flangerSend = 0.0,
+    this.eqSend = 0.0,
+    this.saturationSend = 0.0,
   });
 
   final String id;
@@ -124,6 +154,12 @@ class Voice {
   final double filterCutoff;    // Hz, 20..20000
   final double filterResonance; // 0.0..1.0
   final double reverbSend;      // 0.0..1.0
+  final double delaySend;       // 0.0..1.0
+  final double chorusSend;      // 0.0..1.0
+  final double phaserSend;      // 0.0..1.0
+  final double flangerSend;     // 0.0..1.0
+  final double eqSend;          // 0.0..1.0
+  final double saturationSend;  // 0.0..1.0
 
   /// Compute the actual frequency from a reference Hz.
   double frequencyHz(double referenceHz) {
@@ -160,6 +196,12 @@ class Voice {
     double? filterCutoff,
     double? filterResonance,
     double? reverbSend,
+    double? delaySend,
+    double? chorusSend,
+    double? phaserSend,
+    double? flangerSend,
+    double? eqSend,
+    double? saturationSend,
   }) {
     return Voice(
       id: id,
@@ -183,6 +225,12 @@ class Voice {
       filterCutoff: filterCutoff ?? this.filterCutoff,
       filterResonance: filterResonance ?? this.filterResonance,
       reverbSend: reverbSend ?? this.reverbSend,
+      delaySend: delaySend ?? this.delaySend,
+      chorusSend: chorusSend ?? this.chorusSend,
+      phaserSend: phaserSend ?? this.phaserSend,
+      flangerSend: flangerSend ?? this.flangerSend,
+      eqSend: eqSend ?? this.eqSend,
+      saturationSend: saturationSend ?? this.saturationSend,
     );
   }
 }

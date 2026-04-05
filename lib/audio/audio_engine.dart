@@ -91,6 +91,42 @@ class AudioEngine {
   void setReverbReturn(double level) =>
       _bindings.justifier_set_reverb_return(level);
 
+  void setDelaySend(int voiceId, double send) =>
+      _bindings.justifier_voice_set_delay_send(voiceId, send);
+
+  void setDelayReturn(double level) =>
+      _bindings.justifier_set_delay_return(level);
+
+  void setChorusSend(int voiceId, double send) =>
+      _bindings.justifier_voice_set_chorus_send(voiceId, send);
+
+  void setChorusReturn(double level) =>
+      _bindings.justifier_set_chorus_return(level);
+
+  void setPhaserSend(int voiceId, double send) =>
+      _bindings.justifier_voice_set_phaser_send(voiceId, send);
+
+  void setPhaserReturn(double level) =>
+      _bindings.justifier_set_phaser_return(level);
+
+  void setFlangerSend(int voiceId, double send) =>
+      _bindings.justifier_voice_set_flanger_send(voiceId, send);
+
+  void setFlangerReturn(double level) =>
+      _bindings.justifier_set_flanger_return(level);
+
+  void setEqSend(int voiceId, double send) =>
+      _bindings.justifier_voice_set_eq_send(voiceId, send);
+
+  void setEqReturn(double level) =>
+      _bindings.justifier_set_eq_return(level);
+
+  void setSaturationSend(int voiceId, double send) =>
+      _bindings.justifier_voice_set_saturation_send(voiceId, send);
+
+  void setSaturationReturn(double level) =>
+      _bindings.justifier_set_saturation_return(level);
+
   // ---------------------------------------------------------------------------
   // Gate (envelope control)
   // ---------------------------------------------------------------------------

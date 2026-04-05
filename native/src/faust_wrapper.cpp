@@ -30,6 +30,12 @@
 #include "lfnoise2_dsp.cpp"
 #include "fm_dsp.cpp"
 #include "reverb_dsp.cpp"
+#include "delay_dsp.cpp"
+#include "chorus_dsp.cpp"
+#include "phaser_dsp.cpp"
+#include "flanger_dsp.cpp"
+#include "parametric_eq_dsp.cpp"
+#include "saturation_dsp.cpp"
 
 #include "faust_wrapper.h"
 
@@ -48,7 +54,13 @@ struct FaustDSP {
 };
 
 static FaustDSP g_pool[NUM_WAVEFORM_TYPES][POOL_PER_TYPE];
-static FaustDSP g_reverb;   // singleton reverb DSP (NOT in the pool)
+static FaustDSP g_reverb;      // singleton reverb DSP (NOT in the pool)
+static FaustDSP g_delay;       // singleton delay DSP
+static FaustDSP g_chorus;      // singleton chorus DSP
+static FaustDSP g_phaser;      // singleton phaser DSP
+static FaustDSP g_flanger;     // singleton flanger DSP
+static FaustDSP g_eq;          // singleton parametric EQ DSP
+static FaustDSP g_saturation;  // singleton saturation DSP
 static int      g_sample_rate = 0;
 static bool     g_initialized = false;
 
@@ -104,11 +116,41 @@ int faust_wrapper_init(int sample_rate) {
         }
     }
 
-    // Initialize the singleton reverb DSP (not part of the voice pool)
+    // Initialize singleton effect DSPs (not part of the voice pool)
     g_reverb.instance = new ReverbDSP();
     g_reverb.instance->init(sample_rate);
     g_reverb.instance->buildUserInterface(&g_reverb.ui);
     g_reverb.in_use = false;
+
+    g_delay.instance = new DelayDSP();
+    g_delay.instance->init(sample_rate);
+    g_delay.instance->buildUserInterface(&g_delay.ui);
+    g_delay.in_use = false;
+
+    g_chorus.instance = new ChorusDSP();
+    g_chorus.instance->init(sample_rate);
+    g_chorus.instance->buildUserInterface(&g_chorus.ui);
+    g_chorus.in_use = false;
+
+    g_phaser.instance = new PhaserDSP();
+    g_phaser.instance->init(sample_rate);
+    g_phaser.instance->buildUserInterface(&g_phaser.ui);
+    g_phaser.in_use = false;
+
+    g_flanger.instance = new FlangerDSP();
+    g_flanger.instance->init(sample_rate);
+    g_flanger.instance->buildUserInterface(&g_flanger.ui);
+    g_flanger.in_use = false;
+
+    g_eq.instance = new Parametric_eqDSP();
+    g_eq.instance->init(sample_rate);
+    g_eq.instance->buildUserInterface(&g_eq.ui);
+    g_eq.in_use = false;
+
+    g_saturation.instance = new SaturationDSP();
+    g_saturation.instance->init(sample_rate);
+    g_saturation.instance->buildUserInterface(&g_saturation.ui);
+    g_saturation.in_use = false;
 
     g_initialized = true;
     return 0;
@@ -125,10 +167,34 @@ void faust_wrapper_shutdown(void) {
         }
     }
 
-    // Destroy the singleton reverb DSP
+    // Destroy singleton effect DSPs
     delete g_reverb.instance;
     g_reverb.instance = nullptr;
     g_reverb.in_use = false;
+
+    delete g_delay.instance;
+    g_delay.instance = nullptr;
+    g_delay.in_use = false;
+
+    delete g_chorus.instance;
+    g_chorus.instance = nullptr;
+    g_chorus.in_use = false;
+
+    delete g_phaser.instance;
+    g_phaser.instance = nullptr;
+    g_phaser.in_use = false;
+
+    delete g_flanger.instance;
+    g_flanger.instance = nullptr;
+    g_flanger.in_use = false;
+
+    delete g_eq.instance;
+    g_eq.instance = nullptr;
+    g_eq.in_use = false;
+
+    delete g_saturation.instance;
+    g_saturation.instance = nullptr;
+    g_saturation.in_use = false;
 
     g_initialized  = false;
     g_sample_rate  = 0;
@@ -208,6 +274,48 @@ FaustDSP* faust_wrapper_reverb_acquire(void) {
 void faust_wrapper_reverb_release(void) {
     g_reverb.in_use = false;
 }
+
+FaustDSP* faust_wrapper_delay_acquire(void) {
+    if (!g_initialized) return nullptr;
+    g_delay.in_use = true;
+    return &g_delay;
+}
+void faust_wrapper_delay_release(void) { g_delay.in_use = false; }
+
+FaustDSP* faust_wrapper_chorus_acquire(void) {
+    if (!g_initialized) return nullptr;
+    g_chorus.in_use = true;
+    return &g_chorus;
+}
+void faust_wrapper_chorus_release(void) { g_chorus.in_use = false; }
+
+FaustDSP* faust_wrapper_phaser_acquire(void) {
+    if (!g_initialized) return nullptr;
+    g_phaser.in_use = true;
+    return &g_phaser;
+}
+void faust_wrapper_phaser_release(void) { g_phaser.in_use = false; }
+
+FaustDSP* faust_wrapper_flanger_acquire(void) {
+    if (!g_initialized) return nullptr;
+    g_flanger.in_use = true;
+    return &g_flanger;
+}
+void faust_wrapper_flanger_release(void) { g_flanger.in_use = false; }
+
+FaustDSP* faust_wrapper_eq_acquire(void) {
+    if (!g_initialized) return nullptr;
+    g_eq.in_use = true;
+    return &g_eq;
+}
+void faust_wrapper_eq_release(void) { g_eq.in_use = false; }
+
+FaustDSP* faust_wrapper_saturation_acquire(void) {
+    if (!g_initialized) return nullptr;
+    g_saturation.in_use = true;
+    return &g_saturation;
+}
+void faust_wrapper_saturation_release(void) { g_saturation.in_use = false; }
 
 int faust_wrapper_get_sample_rate(void) {
     return g_sample_rate;

@@ -305,6 +305,156 @@ class JustifierAudioBindings {
       );
   late final _justifier_set_reverb_return = _justifier_set_reverb_returnPtr
       .asFunction<void Function(double)>();
+
+  // --- Delay ---
+
+  void justifier_voice_set_delay_send(int voice_id, double send) {
+    return _justifier_voice_set_delay_send(voice_id, send);
+  }
+
+  late final _justifier_voice_set_delay_sendPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int, ffi.Float)>>(
+        'justifier_voice_set_delay_send',
+      );
+  late final _justifier_voice_set_delay_send =
+      _justifier_voice_set_delay_sendPtr
+          .asFunction<void Function(int, double)>();
+
+  void justifier_set_delay_return(double level) {
+    return _justifier_set_delay_return(level);
+  }
+
+  late final _justifier_set_delay_returnPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Float)>>(
+        'justifier_set_delay_return',
+      );
+  late final _justifier_set_delay_return = _justifier_set_delay_returnPtr
+      .asFunction<void Function(double)>();
+
+  // --- Chorus ---
+
+  void justifier_voice_set_chorus_send(int voice_id, double send) {
+    return _justifier_voice_set_chorus_send(voice_id, send);
+  }
+
+  late final _justifier_voice_set_chorus_sendPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int, ffi.Float)>>(
+        'justifier_voice_set_chorus_send',
+      );
+  late final _justifier_voice_set_chorus_send =
+      _justifier_voice_set_chorus_sendPtr
+          .asFunction<void Function(int, double)>();
+
+  void justifier_set_chorus_return(double level) {
+    return _justifier_set_chorus_return(level);
+  }
+
+  late final _justifier_set_chorus_returnPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Float)>>(
+        'justifier_set_chorus_return',
+      );
+  late final _justifier_set_chorus_return = _justifier_set_chorus_returnPtr
+      .asFunction<void Function(double)>();
+
+  // --- Phaser ---
+
+  void justifier_voice_set_phaser_send(int voice_id, double send) {
+    return _justifier_voice_set_phaser_send(voice_id, send);
+  }
+
+  late final _justifier_voice_set_phaser_sendPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int, ffi.Float)>>(
+        'justifier_voice_set_phaser_send',
+      );
+  late final _justifier_voice_set_phaser_send =
+      _justifier_voice_set_phaser_sendPtr
+          .asFunction<void Function(int, double)>();
+
+  void justifier_set_phaser_return(double level) {
+    return _justifier_set_phaser_return(level);
+  }
+
+  late final _justifier_set_phaser_returnPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Float)>>(
+        'justifier_set_phaser_return',
+      );
+  late final _justifier_set_phaser_return = _justifier_set_phaser_returnPtr
+      .asFunction<void Function(double)>();
+
+  // --- Flanger ---
+
+  void justifier_voice_set_flanger_send(int voice_id, double send) {
+    return _justifier_voice_set_flanger_send(voice_id, send);
+  }
+
+  late final _justifier_voice_set_flanger_sendPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int, ffi.Float)>>(
+        'justifier_voice_set_flanger_send',
+      );
+  late final _justifier_voice_set_flanger_send =
+      _justifier_voice_set_flanger_sendPtr
+          .asFunction<void Function(int, double)>();
+
+  void justifier_set_flanger_return(double level) {
+    return _justifier_set_flanger_return(level);
+  }
+
+  late final _justifier_set_flanger_returnPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Float)>>(
+        'justifier_set_flanger_return',
+      );
+  late final _justifier_set_flanger_return = _justifier_set_flanger_returnPtr
+      .asFunction<void Function(double)>();
+
+  // --- Parametric EQ ---
+
+  void justifier_voice_set_eq_send(int voice_id, double send) {
+    return _justifier_voice_set_eq_send(voice_id, send);
+  }
+
+  late final _justifier_voice_set_eq_sendPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int, ffi.Float)>>(
+        'justifier_voice_set_eq_send',
+      );
+  late final _justifier_voice_set_eq_send =
+      _justifier_voice_set_eq_sendPtr
+          .asFunction<void Function(int, double)>();
+
+  void justifier_set_eq_return(double level) {
+    return _justifier_set_eq_return(level);
+  }
+
+  late final _justifier_set_eq_returnPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Float)>>(
+        'justifier_set_eq_return',
+      );
+  late final _justifier_set_eq_return = _justifier_set_eq_returnPtr
+      .asFunction<void Function(double)>();
+
+  // --- Saturation ---
+
+  void justifier_voice_set_saturation_send(int voice_id, double send) {
+    return _justifier_voice_set_saturation_send(voice_id, send);
+  }
+
+  late final _justifier_voice_set_saturation_sendPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int, ffi.Float)>>(
+        'justifier_voice_set_saturation_send',
+      );
+  late final _justifier_voice_set_saturation_send =
+      _justifier_voice_set_saturation_sendPtr
+          .asFunction<void Function(int, double)>();
+
+  void justifier_set_saturation_return(double level) {
+    return _justifier_set_saturation_return(level);
+  }
+
+  late final _justifier_set_saturation_returnPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Float)>>(
+        'justifier_set_saturation_return',
+      );
+  late final _justifier_set_saturation_return =
+      _justifier_set_saturation_returnPtr.asFunction<void Function(double)>();
 }
 
 enum NativeWaveformType {

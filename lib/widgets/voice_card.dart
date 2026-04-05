@@ -23,7 +23,11 @@ String _cutoffDisplay(double hz) {
 }
 
 /// Compact card displaying all controls for a single voice.
-class VoiceCard extends ConsumerWidget {
+/// Supports three levels of collapse:
+/// - Full card collapse (single dense row)
+/// - ADSR section collapse
+/// - Effects section collapse
+class VoiceCard extends ConsumerStatefulWidget {
   const VoiceCard({
     super.key,
     required this.waveId,
@@ -37,15 +41,27 @@ class VoiceCard extends ConsumerWidget {
   final double referenceHz;
   final Color? color;
 
-  void _update(WidgetRef ref, Voice updated) {
-    ref.read(workspaceProvider.notifier).updateVoice(waveId, voice.id, updated);
+  @override
+  ConsumerState<VoiceCard> createState() => _VoiceCardState();
+}
+
+class _VoiceCardState extends ConsumerState<VoiceCard> {
+  bool _expanded = true;
+  bool _adsrExpanded = true;
+  bool _fxExpanded = false;
+
+  void _update(Voice updated) {
+    ref
+        .read(workspaceProvider.notifier)
+        .updateVoice(widget.waveId, widget.voice.id, updated);
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final accentColor = color ?? AppTheme.prometheusGreen;
+  Widget build(BuildContext context) {
+    final voice = widget.voice;
+    final accentColor = widget.color ?? AppTheme.prometheusGreen;
     final dimColor = accentColor.withValues(alpha: 0.5);
-    final hz = voice.frequencyHz(referenceHz);
+    final hz = voice.frequencyHz(widget.referenceHz);
 
     if (voice.dying) {
       return _DyingBar(
@@ -53,7 +69,7 @@ class VoiceCard extends ConsumerWidget {
         color: accentColor,
         onUndo: () => ref
             .read(workspaceProvider.notifier)
-            .cancelRemoveVoice(waveId, voice.id),
+            .cancelRemoveVoice(widget.waveId, voice.id),
       );
     }
 
@@ -64,249 +80,399 @@ class VoiceCard extends ConsumerWidget {
         color: const Color(0xFF0D0D0D),
         borderRadius: BorderRadius.circular(4),
         border: Border.all(
-          color: voice.enabled ? accentColor.withValues(alpha: 0.3) : const Color(0xFF333333),
+          color: voice.enabled
+              ? accentColor.withValues(alpha: 0.3)
+              : const Color(0xFF333333),
           width: 1,
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row 1: waveform selector + Hz display + enable toggle + remove
-          Row(
-            children: [
-              Expanded(
-                child: WaveformSelector(
-                  selected: voice.waveform,
-                  onChanged: (t) => _update(ref, voice.copyWith(waveform: t)),
-                  color: accentColor,
-                ),
-              ),
-              if (voice.waveform.isPitched)
-                Padding(
-                  padding: const EdgeInsets.only(right: 4),
-                  child: Text(
-                    '${hz.toStringAsFixed(1)} Hz',
+          // Header row (always visible) — waveform name + ratio + Hz + controls
+          _buildHeaderRow(voice, accentColor, dimColor, hz),
+
+          if (_expanded) ...[
+            // Row 1: waveform selector
+            const SizedBox(height: 4),
+            WaveformSelector(
+              selected: voice.waveform,
+              onChanged: (t) => _update(voice.copyWith(waveform: t)),
+              color: accentColor,
+            ),
+
+            // Row 2: ratio input + octave (pitched waveforms only)
+            if (voice.waveform.isPitched) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  RatioInput(
+                    numerator: voice.numerator,
+                    denominator: voice.denominator,
+                    onChanged: (n, d) =>
+                        _update(voice.copyWith(numerator: n, denominator: d)),
+                    color: accentColor,
+                  ),
+                  const SizedBox(width: 4),
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: IconButton(
+                      onPressed: voice.octave > 0
+                          ? () =>
+                              _update(voice.copyWith(octave: voice.octave - 1))
+                          : null,
+                      icon: const Icon(Icons.remove, size: 10),
+                      padding: EdgeInsets.zero,
+                      constraints:
+                          const BoxConstraints(minWidth: 18, minHeight: 18),
+                    ),
+                  ),
+                  Text(
+                    'o${voice.octave}',
                     style: AppTheme.monoSmall.copyWith(color: dimColor),
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              SizedBox(
-                width: 24,
-                height: 24,
-                child: IconButton(
-                  onPressed: () => ref
-                      .read(workspaceProvider.notifier)
-                      .toggleVoiceEnabled(waveId, voice.id),
-                  icon: Icon(
-                    voice.enabled
-                        ? Icons.volume_up_rounded
-                        : Icons.volume_off_rounded,
-                    size: 14,
-                    color: voice.enabled ? accentColor : Colors.grey,
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: IconButton(
+                      onPressed: voice.octave < 9
+                          ? () =>
+                              _update(voice.copyWith(octave: voice.octave + 1))
+                          : null,
+                      icon: const Icon(Icons.add, size: 10),
+                      padding: EdgeInsets.zero,
+                      constraints:
+                          const BoxConstraints(minWidth: 18, minHeight: 18),
+                    ),
                   ),
-                  padding: EdgeInsets.zero,
-                  constraints:
-                      const BoxConstraints(minWidth: 24, minHeight: 24),
-                  tooltip: voice.enabled ? 'Mute voice' : 'Unmute voice',
-                ),
-              ),
-              SizedBox(
-                width: 24,
-                height: 24,
-                child: IconButton(
-                  onPressed: () => ref
-                      .read(workspaceProvider.notifier)
-                      .removeVoice(waveId, voice.id),
-                  icon: const Icon(Icons.close, size: 12),
-                  padding: EdgeInsets.zero,
-                  constraints:
-                      const BoxConstraints(minWidth: 24, minHeight: 24),
-                  tooltip: 'Remove voice',
-                ),
+                ],
               ),
             ],
-          ),
 
-          // Row 2: ratio input + octave + frequency display (pitched waveforms only)
-          if (voice.waveform.isPitched) ...[
             const SizedBox(height: 4),
-            Row(
-              children: [
-                RatioInput(
-                  numerator: voice.numerator,
-                  denominator: voice.denominator,
-                  onChanged: (n, d) =>
-                      _update(ref, voice.copyWith(numerator: n, denominator: d)),
-                  color: accentColor,
-                ),
-                const SizedBox(width: 4),
-                SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: IconButton(
-                    onPressed: voice.octave > 0
-                        ? () =>
-                            _update(ref, voice.copyWith(octave: voice.octave - 1))
-                        : null,
-                    icon: const Icon(Icons.remove, size: 10),
-                    padding: EdgeInsets.zero,
-                    constraints:
-                        const BoxConstraints(minWidth: 18, minHeight: 18),
-                  ),
-                ),
-                Text(
-                  'o${voice.octave}',
-                  style: AppTheme.monoSmall.copyWith(color: dimColor),
-                ),
-                SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: IconButton(
-                    onPressed: voice.octave < 9
-                        ? () =>
-                            _update(ref, voice.copyWith(octave: voice.octave + 1))
-                        : null,
-                    icon: const Icon(Icons.add, size: 10),
-                    padding: EdgeInsets.zero,
-                    constraints:
-                        const BoxConstraints(minWidth: 18, minHeight: 18),
-                  ),
-                ),
-              ],
-            ),
-          ],
 
-          const SizedBox(height: 4),
-
-          // Row 3: amplitude + pan sliders
-          _SliderRow(
-            label: 'amp',
-            value: voice.amplitude,
-            step: 0.01,
-            onChanged: (v) => _update(ref, voice.copyWith(amplitude: v)),
-            color: accentColor,
-          ),
-          _SliderRow(
-            label: 'pan',
-            value: voice.pan,
-            min: -1,
-            max: 1,
-            step: 0.01,
-            onChanged: (v) => _update(ref, voice.copyWith(pan: v)),
-            color: accentColor,
-            displayValue: voice.pan.toStringAsFixed(2),
-          ),
-
-          // Row 4: detune slider (pitched waveforms only)
-          if (voice.waveform.isPitched)
+            // Amplitude + pan + detune (always visible when expanded)
             _SliderRow(
-              label: 'det',
-              value: voice.detuneCents,
-              min: -100,
-              max: 100,
-              step: 1,
-              onChanged: (v) => _update(ref, voice.copyWith(detuneCents: v)),
+              label: 'amp',
+              value: voice.amplitude,
+              step: 0.01,
+              onChanged: (v) => _update(voice.copyWith(amplitude: v)),
               color: accentColor,
-              displayValue: '${voice.detuneCents.toStringAsFixed(0)}c',
-            ),
-
-          // Filter controls (all voices)
-          const SizedBox(height: 2),
-          _FilterTypeRow(
-            selected: voice.filterType,
-            onChanged: (t) => _update(ref, voice.copyWith(filterType: t)),
-            color: accentColor,
-          ),
-          _SliderRow(
-            label: 'cut',
-            value: _cutoffToSlider(voice.filterCutoff),
-            step: 0.01,
-            onChanged: (v) =>
-                _update(ref, voice.copyWith(filterCutoff: _sliderToCutoff(v))),
-            color: accentColor,
-            displayValue: _cutoffDisplay(voice.filterCutoff),
-          ),
-          _SliderRow(
-            label: 'res',
-            value: voice.filterResonance,
-            step: 0.01,
-            onChanged: (v) =>
-                _update(ref, voice.copyWith(filterResonance: v)),
-            color: accentColor,
-          ),
-
-          // Reverb send
-          _SliderRow(
-            label: 'rvb',
-            value: voice.reverbSend,
-            step: 0.01,
-            onChanged: (v) =>
-                _update(ref, voice.copyWith(reverbSend: v)),
-            color: accentColor,
-          ),
-
-          // ADSR envelope controls
-          const SizedBox(height: 2),
-          _SliderRow(
-            label: 'atk',
-            value: voice.attackTime,
-            min: 0.001,
-            max: 5.0,
-            onChanged: (v) => _update(ref, voice.copyWith(attackTime: v)),
-            color: accentColor,
-            displayValue: '${voice.attackTime.toStringAsFixed(3)}s',
-          ),
-          _SliderRow(
-            label: 'dec',
-            value: voice.decayTime,
-            min: 0.001,
-            max: 5.0,
-            onChanged: (v) => _update(ref, voice.copyWith(decayTime: v)),
-            color: accentColor,
-            displayValue: '${voice.decayTime.toStringAsFixed(3)}s',
-          ),
-          _SliderRow(
-            label: 'sus',
-            value: voice.sustainLevel,
-            min: 0.0,
-            max: 1.0,
-            onChanged: (v) => _update(ref, voice.copyWith(sustainLevel: v)),
-            color: accentColor,
-          ),
-          _SliderRow(
-            label: 'rel',
-            value: voice.releaseTime,
-            min: 0.01,
-            max: 30.0,
-            onChanged: (v) => _update(ref, voice.copyWith(releaseTime: v)),
-            color: accentColor,
-            displayValue: '${voice.releaseTime.toStringAsFixed(2)}s',
-          ),
-
-          // FM controls (FM waveform only)
-          if (voice.waveform == WaveformType.fm) ...[
-            _SliderRow(
-              label: 'mrt',
-              value: voice.modRatio,
-              min: 0.1,
-              max: 16,
-              step: 0.1,
-              onChanged: (v) => _update(ref, voice.copyWith(modRatio: v)),
-              color: accentColor,
-              displayValue: voice.modRatio.toStringAsFixed(1),
             ),
             _SliderRow(
-              label: 'mdx',
-              value: voice.modIndex,
-              min: 0,
-              max: 20,
-              step: 0.1,
-              onChanged: (v) => _update(ref, voice.copyWith(modIndex: v)),
+              label: 'pan',
+              value: voice.pan,
+              min: -1,
+              max: 1,
+              step: 0.01,
+              onChanged: (v) => _update(voice.copyWith(pan: v)),
               color: accentColor,
-              displayValue: voice.modIndex.toStringAsFixed(1),
+              displayValue: voice.pan.toStringAsFixed(2),
             ),
+            if (voice.waveform.isPitched)
+              _SliderRow(
+                label: 'det',
+                value: voice.detuneCents,
+                min: -100,
+                max: 100,
+                step: 1,
+                onChanged: (v) => _update(voice.copyWith(detuneCents: v)),
+                color: accentColor,
+                displayValue: '${voice.detuneCents.toStringAsFixed(0)}c',
+              ),
+
+            // Filter controls (always visible when expanded)
+            const SizedBox(height: 2),
+            _FilterTypeRow(
+              selected: voice.filterType,
+              onChanged: (t) => _update(voice.copyWith(filterType: t)),
+              color: accentColor,
+            ),
+            _SliderRow(
+              label: 'cut',
+              value: _cutoffToSlider(voice.filterCutoff),
+              step: 0.01,
+              onChanged: (v) =>
+                  _update(voice.copyWith(filterCutoff: _sliderToCutoff(v))),
+              color: accentColor,
+              displayValue: _cutoffDisplay(voice.filterCutoff),
+            ),
+            _SliderRow(
+              label: 'res',
+              value: voice.filterResonance,
+              step: 0.01,
+              onChanged: (v) =>
+                  _update(voice.copyWith(filterResonance: v)),
+              color: accentColor,
+            ),
+
+            // FM controls (FM waveform only)
+            if (voice.waveform == WaveformType.fm) ...[
+              _SliderRow(
+                label: 'mrt',
+                value: voice.modRatio,
+                min: 0.1,
+                max: 16,
+                step: 0.1,
+                onChanged: (v) => _update(voice.copyWith(modRatio: v)),
+                color: accentColor,
+                displayValue: voice.modRatio.toStringAsFixed(1),
+              ),
+              _SliderRow(
+                label: 'mdx',
+                value: voice.modIndex,
+                min: 0,
+                max: 20,
+                step: 0.1,
+                onChanged: (v) => _update(voice.copyWith(modIndex: v)),
+                color: accentColor,
+                displayValue: voice.modIndex.toStringAsFixed(1),
+              ),
+            ],
+
+            // ADSR section (collapsible)
+            const SizedBox(height: 4),
+            _SectionHeader(
+              label: 'ADSR',
+              expanded: _adsrExpanded,
+              onToggle: () => setState(() => _adsrExpanded = !_adsrExpanded),
+              color: accentColor,
+            ),
+            if (_adsrExpanded) ...[
+              _SliderRow(
+                label: 'atk',
+                value: voice.attackTime,
+                min: 0.001,
+                max: 5.0,
+                onChanged: (v) => _update(voice.copyWith(attackTime: v)),
+                color: accentColor,
+                displayValue: '${voice.attackTime.toStringAsFixed(3)}s',
+              ),
+              _SliderRow(
+                label: 'dec',
+                value: voice.decayTime,
+                min: 0.001,
+                max: 5.0,
+                onChanged: (v) => _update(voice.copyWith(decayTime: v)),
+                color: accentColor,
+                displayValue: '${voice.decayTime.toStringAsFixed(3)}s',
+              ),
+              _SliderRow(
+                label: 'sus',
+                value: voice.sustainLevel,
+                min: 0.0,
+                max: 1.0,
+                onChanged: (v) => _update(voice.copyWith(sustainLevel: v)),
+                color: accentColor,
+              ),
+              _SliderRow(
+                label: 'rel',
+                value: voice.releaseTime,
+                min: 0.01,
+                max: 30.0,
+                onChanged: (v) => _update(voice.copyWith(releaseTime: v)),
+                color: accentColor,
+                displayValue: '${voice.releaseTime.toStringAsFixed(2)}s',
+              ),
+            ],
+
+            // Effects section (collapsible)
+            const SizedBox(height: 4),
+            _SectionHeader(
+              label: 'FX',
+              expanded: _fxExpanded,
+              onToggle: () => setState(() => _fxExpanded = !_fxExpanded),
+              color: accentColor,
+            ),
+            if (_fxExpanded) ...[
+              _SliderRow(
+                label: 'rvb',
+                value: voice.reverbSend,
+                step: 0.01,
+                onChanged: (v) => _update(voice.copyWith(reverbSend: v)),
+                color: accentColor,
+              ),
+              _SliderRow(
+                label: 'dly',
+                value: voice.delaySend,
+                step: 0.01,
+                onChanged: (v) => _update(voice.copyWith(delaySend: v)),
+                color: accentColor,
+              ),
+              _SliderRow(
+                label: 'chr',
+                value: voice.chorusSend,
+                step: 0.01,
+                onChanged: (v) => _update(voice.copyWith(chorusSend: v)),
+                color: accentColor,
+              ),
+              _SliderRow(
+                label: 'phs',
+                value: voice.phaserSend,
+                step: 0.01,
+                onChanged: (v) => _update(voice.copyWith(phaserSend: v)),
+                color: accentColor,
+              ),
+              _SliderRow(
+                label: 'fln',
+                value: voice.flangerSend,
+                step: 0.01,
+                onChanged: (v) => _update(voice.copyWith(flangerSend: v)),
+                color: accentColor,
+              ),
+              _SliderRow(
+                label: 'eq',
+                value: voice.eqSend,
+                step: 0.01,
+                onChanged: (v) => _update(voice.copyWith(eqSend: v)),
+                color: accentColor,
+              ),
+              _SliderRow(
+                label: 'sat',
+                value: voice.saturationSend,
+                step: 0.01,
+                onChanged: (v) => _update(voice.copyWith(saturationSend: v)),
+                color: accentColor,
+              ),
+            ],
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderRow(
+    Voice voice,
+    Color accentColor,
+    Color dimColor,
+    double hz,
+  ) {
+    return SizedBox(
+      height: 24,
+      child: Row(
+        children: [
+          // Expand/collapse toggle
+          SizedBox(
+            width: 24,
+            height: 24,
+            child: IconButton(
+              onPressed: () => setState(() => _expanded = !_expanded),
+              icon: Icon(
+                _expanded
+                    ? Icons.expand_less_rounded
+                    : Icons.expand_more_rounded,
+                size: 14,
+                color: dimColor,
+              ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+              tooltip: _expanded ? 'Collapse' : 'Expand',
+            ),
+          ),
+          // Waveform name
+          Text(
+            voice.waveform.name,
+            style: AppTheme.monoSmall.copyWith(color: accentColor),
+          ),
+          if (voice.waveform.isPitched) ...[
+            const SizedBox(width: 6),
+            Text(
+              '${voice.numerator}/${voice.denominator}',
+              style: AppTheme.monoSmall.copyWith(color: dimColor),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '${hz.toStringAsFixed(1)} Hz',
+              style: AppTheme.monoSmall.copyWith(
+                color: dimColor.withValues(alpha: 0.4),
+              ),
+            ),
+          ],
+          const Spacer(),
+          // Mute toggle
+          SizedBox(
+            width: 24,
+            height: 24,
+            child: IconButton(
+              onPressed: () => ref
+                  .read(workspaceProvider.notifier)
+                  .toggleVoiceEnabled(widget.waveId, voice.id),
+              icon: Icon(
+                voice.enabled
+                    ? Icons.volume_up_rounded
+                    : Icons.volume_off_rounded,
+                size: 14,
+                color: voice.enabled ? accentColor : Colors.grey,
+              ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+              tooltip: voice.enabled ? 'Mute voice' : 'Unmute voice',
+            ),
+          ),
+          // Remove button
+          SizedBox(
+            width: 24,
+            height: 24,
+            child: IconButton(
+              onPressed: () => ref
+                  .read(workspaceProvider.notifier)
+                  .removeVoice(widget.waveId, voice.id),
+              icon: const Icon(Icons.close, size: 12),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+              tooltip: 'Remove voice',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.label,
+    required this.expanded,
+    required this.onToggle,
+    this.color,
+  });
+
+  final String label;
+  final bool expanded;
+  final VoidCallback onToggle;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final accentColor = color ?? AppTheme.prometheusGreen;
+    final dimColor = accentColor.withValues(alpha: 0.3);
+
+    return GestureDetector(
+      onTap: onToggle,
+      child: Container(
+        height: 20,
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: dimColor, width: 0.5)),
+        ),
+        child: Row(
+          children: [
+            Text(
+              label,
+              style: AppTheme.monoSmall.copyWith(
+                color: accentColor.withValues(alpha: 0.6),
+              ),
+            ),
+            const Spacer(),
+            Icon(
+              expanded
+                  ? Icons.expand_less_rounded
+                  : Icons.expand_more_rounded,
+              size: 12,
+              color: accentColor.withValues(alpha: 0.4),
+            ),
+          ],
+        ),
       ),
     );
   }

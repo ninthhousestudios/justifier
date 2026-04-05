@@ -38,7 +38,7 @@ set(FAUST_DSP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/dsp")
 set(FAUST_GEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 file(MAKE_DIRECTORY ${FAUST_GEN_DIR})
 
-set(FAUST_DSP_FILES sine triangle saw square pulse white_noise pink_noise brown_noise lfnoise0 lfnoise1 lfnoise2 fm reverb)
+set(FAUST_DSP_FILES sine triangle saw square pulse white_noise pink_noise brown_noise lfnoise0 lfnoise1 lfnoise2 fm reverb delay chorus phaser flanger parametric_eq saturation)
 
 foreach(DSP_NAME ${FAUST_DSP_FILES})
     # Capitalize first letter for class name (e.g. sine -> SineDSP)

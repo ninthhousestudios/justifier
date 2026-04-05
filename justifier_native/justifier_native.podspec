@@ -17,7 +17,7 @@ Pod::Spec.new do |s|
 
   # Generate Faust DSP C++ files during pod install.
   # Each .dsp -> <Name>DSP class in generated/<name>_dsp.cpp
-  dsp_names = %w[sine triangle saw square pulse noise fm]
+  dsp_names = %w[sine triangle saw square pulse white_noise pink_noise brown_noise lfnoise0 lfnoise1 lfnoise2 fm reverb]
   faust_cmds = dsp_names.map do |name|
     class_name = name.capitalize + 'DSP'
     "faust -lang cpp -cn #{class_name} -i \"#{dsp_dir}/#{name}.dsp\" -o \"#{gen_dir}/#{name}_dsp.cpp\""
@@ -31,17 +31,17 @@ Pod::Spec.new do |s|
   s.source_files = [
     '../native/src/*.{c,cpp,h}',
     '../native/include/*.{h}',
-    'generated/*_dsp.cpp',
+    '../native/src/faust_wrapper_macos.cpp',
   ]
 
-  s.header_mappings_dir = '../native/src'
+  s.header_mappings_dir = '../native'
   s.libraries = 'm'
 
   # Faust include path (macOS: brew install faust)
   faust_include = `faust --includedir 2>/dev/null`.strip
   faust_include = '/usr/local/include' if faust_include.empty?
 
-  s.compiler_flags = "-std=c++17 -O2 -w -DJUSTIFIER_BUILDING"
+  s.compiler_flags = "-std=c++17 -O2 -w -DJUSTIFIER_BUILDING -fvisibility=default"
   s.frameworks     = 'CoreAudio', 'AudioToolbox', 'CoreFoundation'
 
   s.pod_target_xcconfig = {
@@ -52,6 +52,6 @@ Pod::Spec.new do |s|
       "\"#{gen_dir}\"",
       "\"#{faust_include}\"",
     ].join(' '),
-    'OTHER_LDFLAGS' => '-lm',
+    'OTHER_LDFLAGS' => '-lm -undefined dynamic_lookup',
   }
 end

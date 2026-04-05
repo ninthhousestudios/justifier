@@ -68,6 +68,30 @@ JUSTIFIER_EXPORT void justifier_voice_set_filter_resonance(int voice_id, float r
 JUSTIFIER_EXPORT void justifier_voice_set_reverb_send(int voice_id, float send);
 JUSTIFIER_EXPORT void justifier_set_reverb_return(float level);
 
+// Delay send/return
+JUSTIFIER_EXPORT void justifier_voice_set_delay_send(int voice_id, float send);
+JUSTIFIER_EXPORT void justifier_set_delay_return(float level);
+
+// Chorus send/return
+JUSTIFIER_EXPORT void justifier_voice_set_chorus_send(int voice_id, float send);
+JUSTIFIER_EXPORT void justifier_set_chorus_return(float level);
+
+// Phaser send/return
+JUSTIFIER_EXPORT void justifier_voice_set_phaser_send(int voice_id, float send);
+JUSTIFIER_EXPORT void justifier_set_phaser_return(float level);
+
+// Flanger send/return
+JUSTIFIER_EXPORT void justifier_voice_set_flanger_send(int voice_id, float send);
+JUSTIFIER_EXPORT void justifier_set_flanger_return(float level);
+
+// Parametric EQ send/return
+JUSTIFIER_EXPORT void justifier_voice_set_eq_send(int voice_id, float send);
+JUSTIFIER_EXPORT void justifier_set_eq_return(float level);
+
+// Saturation send/return
+JUSTIFIER_EXPORT void justifier_voice_set_saturation_send(int voice_id, float send);
+JUSTIFIER_EXPORT void justifier_set_saturation_return(float level);
+
 // Gate (envelope on/off — attack on create, release on sleep-before-destroy)
 JUSTIFIER_EXPORT void justifier_voice_set_gate(int voice_id, int gate_on);
 JUSTIFIER_EXPORT void justifier_voice_set_gate_times(int voice_id, float attack_s, float decay_s, float sustain_level, float release_s);
