@@ -161,7 +161,56 @@ int main(int argc, char* argv[]) {
     usleep(100 * 1000);
     PASS("Master volume changes applied");
 
-    // --- 12: Shutdown ---
+    // --- 12: Per-voice filter ---
+    TEST("Per-voice filter");
+    int vf = justifier_voice_add(WAVEFORM_SAW, 440.0f, 0.3f);
+    CHECK(vf >= 0, "filter test voice created");
+    usleep(play_ms * 1000);
+
+    // All 4 filter types
+    for (int ft = 0; ft <= 3; ft++) {
+        printf("  Filter type %d\n", ft);
+        justifier_voice_set_filter_type(vf, ft);
+        justifier_voice_set_filter_cutoff(vf, 800.0f);
+        justifier_voice_set_filter_resonance(vf, 0.5f);
+        usleep(play_ms * 1000 / 2);
+    }
+    PASS("All 4 filter types applied");
+
+    // Cutoff sweep
+    justifier_voice_set_filter_type(vf, 0);  // LP
+    justifier_voice_set_filter_resonance(vf, 0.3f);
+    for (float cutoff = 200.0f; cutoff <= 10000.0f; cutoff += 2000.0f) {
+        justifier_voice_set_filter_cutoff(vf, cutoff);
+        usleep(play_ms * 1000 / 5);
+    }
+    justifier_voice_set_filter_cutoff(vf, 20000.0f);
+    PASS("Cutoff sweep complete");
+
+    // Invalid voice IDs — must not crash
+    justifier_voice_set_filter_type(-1, 0);
+    justifier_voice_set_filter_type(99, 0);
+    justifier_voice_set_filter_cutoff(-1, 1000.0f);
+    justifier_voice_set_filter_cutoff(99, 1000.0f);
+    justifier_voice_set_filter_resonance(-1, 0.5f);
+    justifier_voice_set_filter_resonance(99, 0.5f);
+    usleep(100 * 1000);
+    PASS("Invalid voice IDs handled safely");
+
+    // Filter survives waveform change
+    justifier_voice_set_filter_type(vf, 1);       // HP
+    justifier_voice_set_filter_cutoff(vf, 500.0f);
+    justifier_voice_set_filter_resonance(vf, 0.6f);
+    usleep(100 * 1000);
+    justifier_voice_set_waveform(vf, WAVEFORM_SQUARE);
+    usleep(play_ms * 1000);
+    PASS("Filter survives waveform crossfade");
+
+    justifier_voice_remove(vf);
+    usleep(100 * 1000);
+    PASS("Per-voice filter tests complete");
+
+    // --- 13: Shutdown ---
     TEST("Shutdown");
     int xruns = justifier_get_xrun_count();
     justifier_shutdown();
