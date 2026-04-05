@@ -90,6 +90,9 @@ class Voice {
     this.dying = false,
     this.modRatio = 1.0,
     this.modIndex = 0.0,
+    this.filterType = 0,
+    this.filterCutoff = 20000.0,
+    this.filterResonance = 0.0,
   });
 
   final String id;
@@ -106,6 +109,9 @@ class Voice {
   final bool dying;
   final double modRatio;
   final double modIndex;
+  final int filterType;         // 0=LP, 1=HP, 2=BP, 3=notch
+  final double filterCutoff;    // Hz, 20..20000
+  final double filterResonance; // 0.0..1.0
 
   /// Compute the actual frequency from a reference Hz.
   double frequencyHz(double referenceHz) {
@@ -135,6 +141,9 @@ class Voice {
     bool? dying,
     double? modRatio,
     double? modIndex,
+    int? filterType,
+    double? filterCutoff,
+    double? filterResonance,
   }) {
     return Voice(
       id: id,
@@ -151,6 +160,9 @@ class Voice {
       dying: dying ?? this.dying,
       modRatio: modRatio ?? this.modRatio,
       modIndex: modIndex ?? this.modIndex,
+      filterType: filterType ?? this.filterType,
+      filterCutoff: filterCutoff ?? this.filterCutoff,
+      filterResonance: filterResonance ?? this.filterResonance,
     );
   }
 }

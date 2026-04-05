@@ -195,6 +195,15 @@ class WorkspaceNotifier extends Notifier<WorkspaceState> {
       if (updated.modIndex != old.modIndex) {
         _engine.setModIndex(eid, updated.modIndex);
       }
+      if (updated.filterType != old.filterType) {
+        _engine.setFilterType(eid, updated.filterType);
+      }
+      if (updated.filterCutoff != old.filterCutoff) {
+        _engine.setFilterCutoff(eid, updated.filterCutoff);
+      }
+      if (updated.filterResonance != old.filterResonance) {
+        _engine.setFilterResonance(eid, updated.filterResonance);
+      }
     }
 
     state = state.copyWith(
@@ -215,6 +224,24 @@ class WorkspaceNotifier extends Notifier<WorkspaceState> {
       _engine.setGate(voice.engineVoiceId!, newEnabled);
     }
     updateVoice(waveId, voiceId, voice.copyWith(enabled: newEnabled));
+  }
+
+  void setFilterType(String waveId, String voiceId, int type) {
+    final wave = state.waves.firstWhere((w) => w.id == waveId);
+    final voice = wave.voices.firstWhere((v) => v.id == voiceId);
+    updateVoice(waveId, voiceId, voice.copyWith(filterType: type));
+  }
+
+  void setFilterCutoff(String waveId, String voiceId, double hz) {
+    final wave = state.waves.firstWhere((w) => w.id == waveId);
+    final voice = wave.voices.firstWhere((v) => v.id == voiceId);
+    updateVoice(waveId, voiceId, voice.copyWith(filterCutoff: hz));
+  }
+
+  void setFilterResonance(String waveId, String voiceId, double resonance) {
+    final wave = state.waves.firstWhere((w) => w.id == waveId);
+    final voice = wave.voices.firstWhere((v) => v.id == voiceId);
+    updateVoice(waveId, voiceId, voice.copyWith(filterResonance: resonance));
   }
 
   void panic() {
