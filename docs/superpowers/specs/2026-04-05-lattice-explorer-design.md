@@ -229,6 +229,7 @@ All engine functions required (addVoice, removeVoice, setFrequency, setGate, etc
 - Animated transitions when switching projection axes
 - Lattice-driven voice removal (right-click active node to remove)
 - Persistence of lattice state (pan position, expanded nodes)
+- Auto-scroll to voice card when clicking active lattice node
 - Keyboard shortcuts beyond H (zoom, expand, toggle labels, etc.)
 - Console/engine stats display (relocate to top bar tooltip or lattice footer)
 - Configurable default waveform for lattice-spawned voices
