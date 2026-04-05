@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +9,18 @@ import '../providers/workspace_provider.dart';
 import '../theme/app_theme.dart';
 import 'ratio_input.dart';
 import 'waveform_selector.dart';
+
+const _filterTypeLabels = ['LP', 'HP', 'BP', 'NT'];
+
+double _sliderToCutoff(double v) => 20.0 * pow(1000.0, v);
+double _cutoffToSlider(double hz) => log(hz / 20.0) / log(1000.0);
+
+String _cutoffDisplay(double hz) {
+  if (hz >= 1000) {
+    return '${(hz / 1000).toStringAsFixed(1)}k';
+  }
+  return '${hz.round()} Hz';
+}
 
 /// Compact card displaying all controls for a single voice.
 class VoiceCard extends ConsumerWidget {
@@ -196,6 +210,31 @@ class VoiceCard extends ConsumerWidget {
               displayValue: '${voice.detuneCents.toStringAsFixed(0)}c',
             ),
 
+          // Filter controls (all voices)
+          const SizedBox(height: 2),
+          _FilterTypeRow(
+            selected: voice.filterType,
+            onChanged: (t) => _update(ref, voice.copyWith(filterType: t)),
+            color: accentColor,
+          ),
+          _SliderRow(
+            label: 'cut',
+            value: _cutoffToSlider(voice.filterCutoff),
+            step: 0.01,
+            onChanged: (v) =>
+                _update(ref, voice.copyWith(filterCutoff: _sliderToCutoff(v))),
+            color: accentColor,
+            displayValue: _cutoffDisplay(voice.filterCutoff),
+          ),
+          _SliderRow(
+            label: 'res',
+            value: voice.filterResonance,
+            step: 0.01,
+            onChanged: (v) =>
+                _update(ref, voice.copyWith(filterResonance: v)),
+            color: accentColor,
+          ),
+
           // FM controls (FM waveform only)
           if (voice.waveform == WaveformType.fm) ...[
             _SliderRow(
@@ -293,6 +332,59 @@ class _SliderRow extends StatelessWidget {
               textAlign: TextAlign.right,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FilterTypeRow extends StatelessWidget {
+  const _FilterTypeRow({
+    required this.selected,
+    required this.onChanged,
+    this.color,
+  });
+
+  final int selected;
+  final ValueChanged<int> onChanged;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final accentColor = color ?? AppTheme.prometheusGreen;
+    final dimColor = accentColor.withValues(alpha: 0.5);
+
+    return SizedBox(
+      height: 20,
+      child: Row(
+        children: [
+          SizedBox(
+            width: 24,
+            child: Text('flt', style: AppTheme.monoSmall.copyWith(color: dimColor)),
+          ),
+          for (int i = 0; i < _filterTypeLabels.length; i++)
+            Padding(
+              padding: const EdgeInsets.only(right: 2),
+              child: SizedBox(
+                height: 18,
+                child: OutlinedButton(
+                  onPressed: () => onChanged(i),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    side: BorderSide(
+                      color: i == selected ? accentColor : const Color(0xFF333333),
+                    ),
+                    backgroundColor:
+                        i == selected ? accentColor.withValues(alpha: 0.15) : Colors.transparent,
+                    foregroundColor: i == selected ? accentColor : dimColor,
+                    textStyle: AppTheme.monoSmall,
+                  ),
+                  child: Text(_filterTypeLabels[i]),
+                ),
+              ),
+            ),
         ],
       ),
     );
