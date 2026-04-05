@@ -66,6 +66,9 @@ static void apply_control_message(AudioEngine* eng, const ControlMessage* msg) {
             slot->detune_cents = 0.0f;
             slot->attack_time = 0.05f;
             slot->release_time = 10.0f;
+            slot->filter_type      = 0.0f;      // LP
+            slot->filter_cutoff    = 20000.0f;   // effectively bypass
+            slot->filter_resonance = 0.0f;
             slot->dsp_pending = NULL;
             slot->crossfade_samples_remaining = 0;
             slot->crossfade_gain = 0.0f;
@@ -75,6 +78,9 @@ static void apply_control_message(AudioEngine* eng, const ControlMessage* msg) {
             faust_wrapper_set_param(slot->dsp, "attack",  slot->attack_time);
             faust_wrapper_set_param(slot->dsp, "release", slot->release_time);
             faust_wrapper_set_param(slot->dsp, "gate",    1.0f);
+            faust_wrapper_set_param(slot->dsp, "filter_type",   slot->filter_type);
+            faust_wrapper_set_param(slot->dsp, "filter_cutoff", slot->filter_cutoff);
+            faust_wrapper_set_param(slot->dsp, "filter_res",    slot->filter_resonance);
 
             slot->state.store(VOICE_ACTIVE);
             eng->active_voice_count.fetch_add(1);
@@ -151,6 +157,9 @@ static void apply_control_message(AudioEngine* eng, const ControlMessage* msg) {
             faust_wrapper_set_param(new_dsp, "attack",    slot->attack_time);
             faust_wrapper_set_param(new_dsp, "release",   slot->release_time);
             faust_wrapper_set_param(new_dsp, "gate",      1.0f);
+            faust_wrapper_set_param(new_dsp, "filter_type",   slot->filter_type);
+            faust_wrapper_set_param(new_dsp, "filter_cutoff", slot->filter_cutoff);
+            faust_wrapper_set_param(new_dsp, "filter_res",    slot->filter_resonance);
 
             if (slot->dsp_pending) {
                 faust_wrapper_release(slot->dsp_pending);
@@ -200,6 +209,39 @@ static void apply_control_message(AudioEngine* eng, const ControlMessage* msg) {
 
         case MSG_SET_MASTER_VOLUME: {
             eng->master_volume = msg->float_value;
+            break;
+        }
+
+        case MSG_SET_FILTER_TYPE: {
+            if (id < 0 || id >= MAX_VOICES) break;
+            VoiceSlot* slot = &eng->voices[id];
+            if (slot->state.load() == VOICE_FREE) break;
+            slot->filter_type = (float)msg->int_value;
+            faust_wrapper_set_param(slot->dsp, "filter_type", slot->filter_type);
+            if (slot->dsp_pending)
+                faust_wrapper_set_param(slot->dsp_pending, "filter_type", slot->filter_type);
+            break;
+        }
+
+        case MSG_SET_FILTER_CUTOFF: {
+            if (id < 0 || id >= MAX_VOICES) break;
+            VoiceSlot* slot = &eng->voices[id];
+            if (slot->state.load() == VOICE_FREE) break;
+            slot->filter_cutoff = msg->float_value;
+            faust_wrapper_set_param(slot->dsp, "filter_cutoff", slot->filter_cutoff);
+            if (slot->dsp_pending)
+                faust_wrapper_set_param(slot->dsp_pending, "filter_cutoff", slot->filter_cutoff);
+            break;
+        }
+
+        case MSG_SET_FILTER_RESONANCE: {
+            if (id < 0 || id >= MAX_VOICES) break;
+            VoiceSlot* slot = &eng->voices[id];
+            if (slot->state.load() == VOICE_FREE) break;
+            slot->filter_resonance = msg->float_value;
+            faust_wrapper_set_param(slot->dsp, "filter_res", slot->filter_resonance);
+            if (slot->dsp_pending)
+                faust_wrapper_set_param(slot->dsp_pending, "filter_res", slot->filter_resonance);
             break;
         }
     }
@@ -504,6 +546,33 @@ int justifier_get_xrun_count(void) {
 
 int justifier_get_active_voice_count(void) {
     return g_engine.active_voice_count.load();
+}
+
+void justifier_voice_set_filter_type(int voice_id, int type) {
+    if (!g_engine.running) return;
+    ControlMessage msg = {};
+    msg.type      = MSG_SET_FILTER_TYPE;
+    msg.voice_id  = voice_id;
+    msg.int_value = type;
+    g_engine.control_queue->enqueue(msg);
+}
+
+void justifier_voice_set_filter_cutoff(int voice_id, float hz) {
+    if (!g_engine.running) return;
+    ControlMessage msg = {};
+    msg.type        = MSG_SET_FILTER_CUTOFF;
+    msg.voice_id    = voice_id;
+    msg.float_value = hz;
+    g_engine.control_queue->enqueue(msg);
+}
+
+void justifier_voice_set_filter_resonance(int voice_id, float resonance) {
+    if (!g_engine.running) return;
+    ControlMessage msg = {};
+    msg.type        = MSG_SET_FILTER_RESONANCE;
+    msg.voice_id    = voice_id;
+    msg.float_value = resonance;
+    g_engine.control_queue->enqueue(msg);
 }
 
 } // extern "C"
