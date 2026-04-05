@@ -79,10 +79,7 @@ set_target_properties(justifier_audio PROPERTIES
 # Mark this TU as the library build (triggers dllexport on Windows)
 target_compile_definitions(justifier_audio PRIVATE JUSTIFIER_BUILDING)
 
-install(TARGETS justifier_audio
-    LIBRARY DESTINATION "lib"
-    RUNTIME DESTINATION "bin"
-)
+
 
 # Generated DSP files are #included directly by faust_wrapper.cpp, not compiled
 # as independent TUs. They depend on Faust base class headers (dsp::dsp, UI, Meta)
