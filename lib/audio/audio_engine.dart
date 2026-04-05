@@ -171,15 +171,27 @@ class AudioEngine {
   // ---------------------------------------------------------------------------
 
   static DynamicLibrary _loadLibrary() {
+    if (Platform.isMacOS) {
+      // CMake builds libjustifier_audio.dylib; the podspec script_phase
+      // copies it into the justifier_native framework inside the app bundle.
+      final exeDir = File(Platform.resolvedExecutable).parent.path;
+      final candidates = [
+        // Inside the pod's framework
+        '$exeDir/../Frameworks/justifier_native.framework/Versions/A/Frameworks/libjustifier_audio.dylib',
+        // Direct in app Frameworks (if copy target changes)
+        '$exeDir/../Frameworks/libjustifier_audio.dylib',
+      ];
+      for (final path in candidates) {
+        if (File(path).existsSync()) return DynamicLibrary.open(path);
+      }
+      return DynamicLibrary.process();
+    }
+
     final exeDir = File(Platform.resolvedExecutable).parent.path;
 
     // Platform-specific candidates in order of priority.
     final candidates = <String>[
       if (Platform.isLinux) '$exeDir/lib/libjustifier_audio.so',
-      if (Platform.isMacOS) ...[
-        '$exeDir/../Frameworks/justifier_native.framework/justifier_native',
-        '$exeDir/../Frameworks/libjustifier_audio.dylib',
-      ],
       if (Platform.isWindows) '$exeDir/justifier_audio.dll',
     ];
 
@@ -190,9 +202,7 @@ class AudioEngine {
     // Fallback: bare library name (relies on OS linker search path).
     final bareName = Platform.isWindows
         ? 'justifier_audio.dll'
-        : Platform.isLinux
-            ? 'libjustifier_audio.so'
-            : 'libjustifier_audio.dylib';
+        : 'libjustifier_audio.so';
     try {
       return DynamicLibrary.open(bareName);
     } catch (_) {}
