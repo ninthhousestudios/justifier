@@ -97,10 +97,13 @@ target_include_directories(justifier_audio PRIVATE
     ${FAUST_INCLUDE_DIR}
 )
 
-target_link_libraries(justifier_audio PRIVATE
-    pthread
-    m
-)
+# Unix-specific libraries (pthread and libm don't exist on Windows)
+if(UNIX)
+    target_link_libraries(justifier_audio PRIVATE
+        pthread
+        m
+    )
+endif()
 
 # Linux: link ALSA for miniaudio ALSA backend
 if(UNIX AND NOT APPLE)
