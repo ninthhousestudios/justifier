@@ -17,6 +17,7 @@ class WorkspaceState {
     this.eqReturn = 0.3,
     this.saturationReturn = 0.3,
     this.waves = const [],
+    this.focusedWaveId,
   });
 
   final double referenceHz;
@@ -29,6 +30,9 @@ class WorkspaceState {
   final double eqReturn;
   final double saturationReturn;
   final List<Wave> waves;
+  final String? focusedWaveId;
+
+  static const _sentinel = Object();
 
   WorkspaceState copyWith({
     double? referenceHz,
@@ -41,6 +45,7 @@ class WorkspaceState {
     double? eqReturn,
     double? saturationReturn,
     List<Wave>? waves,
+    Object? focusedWaveId = _sentinel,
   }) {
     return WorkspaceState(
       referenceHz: referenceHz ?? this.referenceHz,
@@ -53,6 +58,7 @@ class WorkspaceState {
       eqReturn: eqReturn ?? this.eqReturn,
       saturationReturn: saturationReturn ?? this.saturationReturn,
       waves: waves ?? this.waves,
+      focusedWaveId: focusedWaveId == _sentinel ? this.focusedWaveId : focusedWaveId as String?,
     );
   }
 }

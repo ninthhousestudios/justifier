@@ -81,6 +81,33 @@ class FakeAudioEngine implements AudioEngine {
   void setReverbReturn(double level) {}
 
   @override
+  void setDelaySend(int voiceId, double send) {}
+
+  @override
+  void setChorusSend(int voiceId, double send) {}
+
+  @override
+  void setPhaserSend(int voiceId, double send) {}
+
+  @override
+  void setFlangerSend(int voiceId, double send) {}
+
+  @override
+  void setEqSend(int voiceId, double send) {}
+
+  @override
+  void setSaturationSend(int voiceId, double send) {}
+
+  @override
+  void setFilterType(int voiceId, int type) {}
+
+  @override
+  void setFilterCutoff(int voiceId, double hz) {}
+
+  @override
+  void setFilterResonance(int voiceId, double resonance) {}
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
@@ -118,10 +145,11 @@ void main() {
     expect(find.text('Add Wave'), findsOneWidget);
   });
 
-  testWidgets('console panel is visible', (tester) async {
+  testWidgets('lattice panel is visible', (tester) async {
     await tester.pumpWidget(await testApp());
 
-    expect(find.text('CONSOLE'), findsOneWidget);
+    // Lattice controls should be in the right panel
+    expect(find.text('Nested'), findsOneWidget);
   });
 
   testWidgets('adding a wave shows wave column with add voice button',

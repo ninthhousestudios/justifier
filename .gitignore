@@ -11,8 +11,9 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
-
+*.png
 justifier-macos-error.md
+release/
 
 # IntelliJ related
 *.iml

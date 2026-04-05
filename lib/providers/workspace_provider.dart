@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -57,6 +59,9 @@ class WorkspaceNotifier extends Notifier<WorkspaceState> {
       color: _waveColors[index % _waveColors.length],
     );
     state = state.copyWith(waves: [...state.waves, wave]);
+    if (state.focusedWaveId == null) {
+      state = state.copyWith(focusedWaveId: id);
+    }
     return id;
   }
 
@@ -76,8 +81,17 @@ class WorkspaceNotifier extends Notifier<WorkspaceState> {
         state = state.copyWith(
           waves: state.waves.where((w) => w.id != waveId).toList(),
         );
+        if (state.focusedWaveId == waveId) {
+          state = state.copyWith(
+            focusedWaveId: state.waves.isEmpty ? null : state.waves.first.id,
+          );
+        }
       },
     );
+  }
+
+  void focusWave(String waveId) {
+    state = state.copyWith(focusedWaveId: waveId);
   }
 
   String addVoice(String waveId, WaveformType type) {
@@ -334,5 +348,44 @@ class WorkspaceNotifier extends Notifier<WorkspaceState> {
 
   void panic() {
     _engine.panic();
+  }
+
+  String? addVoiceFromLattice(String waveId, int numerator, int denominator, int octave) {
+    final voiceId = _uuid.v4();
+    final hz = state.referenceHz * (numerator / denominator) * pow(2, octave);
+    final engineId = _engine.addVoice(WaveformType.sine, hz, 0.5);
+    if (engineId < 0) return null; // voice pool full
+    // Set ADSR before gating
+    const defaults = Voice(id: '');
+    _engine.setGateTimes(engineId,
+        attack: defaults.attackTime,
+        decay: defaults.decayTime,
+        sustain: defaults.sustainLevel,
+        release: defaults.releaseTime);
+    _engine.setReverbSend(engineId, 0.0);
+    _engine.setDelaySend(engineId, 0.0);
+    _engine.setChorusSend(engineId, 0.0);
+    _engine.setPhaserSend(engineId, 0.0);
+    _engine.setFlangerSend(engineId, 0.0);
+    _engine.setEqSend(engineId, 0.0);
+    _engine.setSaturationSend(engineId, 0.0);
+    // Gate AFTER frequency is correct (avoids pitch glitch at 1/1)
+    _engine.setGate(engineId, true);
+    final voice = Voice(
+      id: voiceId,
+      engineVoiceId: engineId,
+      waveform: WaveformType.sine,
+      numerator: numerator,
+      denominator: denominator,
+      octave: octave,
+      enabled: true,
+    );
+    state = state.copyWith(
+      waves: state.waves.map((w) {
+        if (w.id != waveId) return w;
+        return w.copyWith(voices: [...w.voices, voice]);
+      }).toList(),
+    );
+    return voiceId;
   }
 }

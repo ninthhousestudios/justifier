@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../models/workspace_state.dart';
+import '../providers/lattice_provider.dart';
 import '../providers/workspace_provider.dart';
 import '../providers/zoom_provider.dart';
 import '../theme/app_theme.dart';
 import 'connection_status_badge.dart';
+import 'lattice/lattice_panel.dart';
 import 'wave_column.dart';
 
 /// Top-level app layout: workspace area + right console panel.
@@ -32,26 +34,53 @@ class AppShell extends ConsumerWidget {
             onAddWave: () => ref.read(workspaceProvider.notifier).addWave(),
           ),
           const Divider(height: 1),
-          // Main content
+          // Main content: voice panel + drag divider + lattice panel
           Expanded(
-            child: Row(
-              children: [
-                // Workspace area
-                Expanded(
-                  child: workspace.waves.isEmpty
-                      ? _EmptyState(
-                          onAddWave: () =>
-                              ref.read(workspaceProvider.notifier).addWave(),
-                        )
-                      : _WaveList(
-                          waves: workspace.waves,
-                          referenceHz: workspace.referenceHz,
-                        ),
-                ),
-                // Right panel (console placeholder)
-                const VerticalDivider(width: 1),
-                const _ConsolePanel(),
-              ],
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final lattice = ref.watch(latticeProvider);
+                final divider = lattice.dividerFraction;
+                final totalWidth = constraints.maxWidth;
+                final latticeWidth = totalWidth * divider;
+                final voiceWidth = totalWidth - latticeWidth - 8;
+
+                return Row(
+                  children: [
+                    // Voice panel (left)
+                    SizedBox(
+                      width: voiceWidth.clamp(0, totalWidth),
+                      child: workspace.waves.isEmpty
+                          ? _EmptyState(
+                              onAddWave: () =>
+                                  ref.read(workspaceProvider.notifier).addWave(),
+                            )
+                          : _WaveList(
+                              waves: workspace.waves,
+                              referenceHz: workspace.referenceHz,
+                            ),
+                    ),
+                    // Drag divider
+                    _DragDivider(
+                      onDrag: (dx) {
+                        final newFraction = divider - dx / totalWidth;
+                        ref
+                            .read(latticeProvider.notifier)
+                            .setDividerFraction(newFraction);
+                      },
+                      onDoubleTap: () {
+                        ref.read(latticeProvider.notifier).setDividerFraction(
+                              divider > 0.01 ? 0.0 : 0.6,
+                            );
+                      },
+                    ),
+                    // Lattice panel (right)
+                    SizedBox(
+                      width: latticeWidth.clamp(0, totalWidth),
+                      child: const LatticePanel(),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -227,35 +256,35 @@ class _WindowButton extends StatelessWidget {
   }
 }
 
-class _ConsolePanel extends StatelessWidget {
-  const _ConsolePanel();
+class _DragDivider extends StatelessWidget {
+  const _DragDivider({
+    required this.onDrag,
+    required this.onDoubleTap,
+  });
+
+  final ValueChanged<double> onDrag;
+  final VoidCallback onDoubleTap;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 250,
-      child: Container(
-        color: const Color(0xFF080808),
-        padding: const EdgeInsets.all(8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('CONSOLE',
-                style: AppTheme.monoSmall.copyWith(
-                  color: AppTheme.prometheusViolet,
-                )),
-            const Divider(),
-            Expanded(
-              child: Center(
-                child: Text(
-                  'Connected to engine',
-                  style: AppTheme.monoSmall.copyWith(
-                    color: AppTheme.prometheusGreen.withValues(alpha: 0.3),
-                  ),
-                ),
+    return GestureDetector(
+      onHorizontalDragUpdate: (details) => onDrag(details.delta.dx),
+      onDoubleTap: onDoubleTap,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.resizeColumn,
+        child: Container(
+          width: 8,
+          color: const Color(0xFF0A0A0A),
+          child: Center(
+            child: Container(
+              width: 2,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppTheme.prometheusGreen.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(1),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

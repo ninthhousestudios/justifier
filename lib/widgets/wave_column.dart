@@ -20,11 +20,19 @@ class WaveColumn extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final focusedWaveId =
+        ref.watch(workspaceProvider.select((s) => s.focusedWaveId));
+    final isFocused = focusedWaveId == wave.id;
     return Container(
       width: 280,
       margin: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: wave.color, width: 2)),
+        border: Border(
+          top: BorderSide(
+            color: isFocused ? wave.color : wave.color.withValues(alpha: 0.2),
+            width: isFocused ? 3 : 2,
+          ),
+        ),
         color: const Color(0xFF111111),
         borderRadius: BorderRadius.circular(6),
       ),
@@ -72,46 +80,49 @@ class _WaveHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              wave.name,
-              style: AppTheme.mono.copyWith(color: wave.color),
-              overflow: TextOverflow.ellipsis,
+    return GestureDetector(
+      onTap: () => ref.read(workspaceProvider.notifier).focusWave(wave.id),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                wave.name,
+                style: AppTheme.mono.copyWith(color: wave.color),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ),
-          SizedBox(
-            width: 24,
-            height: 24,
-            child: IconButton(
-              onPressed: () => ref
-                  .read(workspaceProvider.notifier)
-                  .addVoice(wave.id, WaveformType.sine),
-              icon: const Icon(Icons.add, size: 14),
-              padding: EdgeInsets.zero,
-              constraints:
-                  const BoxConstraints(minWidth: 24, minHeight: 24),
-              tooltip: 'Add voice',
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: IconButton(
+                onPressed: () => ref
+                    .read(workspaceProvider.notifier)
+                    .addVoice(wave.id, WaveformType.sine),
+                icon: const Icon(Icons.add, size: 14),
+                padding: EdgeInsets.zero,
+                constraints:
+                    const BoxConstraints(minWidth: 24, minHeight: 24),
+                tooltip: 'Add voice',
+              ),
             ),
-          ),
-          SizedBox(
-            width: 24,
-            height: 24,
-            child: IconButton(
-              onPressed: () => ref
-                  .read(workspaceProvider.notifier)
-                  .removeWave(wave.id),
-              icon: const Icon(Icons.close, size: 12),
-              padding: EdgeInsets.zero,
-              constraints:
-                  const BoxConstraints(minWidth: 24, minHeight: 24),
-              tooltip: 'Remove wave',
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: IconButton(
+                onPressed: () => ref
+                    .read(workspaceProvider.notifier)
+                    .removeWave(wave.id),
+                icon: const Icon(Icons.close, size: 12),
+                padding: EdgeInsets.zero,
+                constraints:
+                    const BoxConstraints(minWidth: 24, minHeight: 24),
+                tooltip: 'Remove wave',
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
