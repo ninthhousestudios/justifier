@@ -144,6 +144,41 @@ class JustifierAudioBindings {
   late final _justifier_voice_set_mod_index = _justifier_voice_set_mod_indexPtr
       .asFunction<void Function(int, double)>();
 
+  void justifier_voice_set_filter_type(int voice_id, int type) {
+    return _justifier_voice_set_filter_type(voice_id, type);
+  }
+
+  late final _justifier_voice_set_filter_typePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int, ffi.Int)>>(
+        'justifier_voice_set_filter_type',
+      );
+  late final _justifier_voice_set_filter_type =
+      _justifier_voice_set_filter_typePtr.asFunction<void Function(int, int)>();
+
+  void justifier_voice_set_filter_cutoff(int voice_id, double hz) {
+    return _justifier_voice_set_filter_cutoff(voice_id, hz);
+  }
+
+  late final _justifier_voice_set_filter_cutoffPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int, ffi.Float)>>(
+        'justifier_voice_set_filter_cutoff',
+      );
+  late final _justifier_voice_set_filter_cutoff =
+      _justifier_voice_set_filter_cutoffPtr
+          .asFunction<void Function(int, double)>();
+
+  void justifier_voice_set_filter_resonance(int voice_id, double resonance) {
+    return _justifier_voice_set_filter_resonance(voice_id, resonance);
+  }
+
+  late final _justifier_voice_set_filter_resonancePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int, ffi.Float)>>(
+        'justifier_voice_set_filter_resonance',
+      );
+  late final _justifier_voice_set_filter_resonance =
+      _justifier_voice_set_filter_resonancePtr
+          .asFunction<void Function(int, double)>();
+
   void justifier_voice_set_gate(int voice_id, int gate_on) {
     return _justifier_voice_set_gate(voice_id, gate_on);
   }
@@ -273,3 +308,5 @@ const int JUSTIFIER_DEFAULT_SAMPLE_RATE = 48000;
 const int JUSTIFIER_DEFAULT_BUFFER_SIZE = 256;
 
 const int JUSTIFIER_MAX_BUFFER_SIZE = 4096;
+
+const int NUM_WAVEFORM_TYPES = 12;

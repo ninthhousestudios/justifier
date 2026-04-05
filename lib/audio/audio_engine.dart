@@ -69,6 +69,19 @@ class AudioEngine {
       _bindings.justifier_voice_set_mod_index(voiceId, index);
 
   // ---------------------------------------------------------------------------
+  // Filter
+  // ---------------------------------------------------------------------------
+
+  void setFilterType(int voiceId, int type) =>
+      _bindings.justifier_voice_set_filter_type(voiceId, type);
+
+  void setFilterCutoff(int voiceId, double hz) =>
+      _bindings.justifier_voice_set_filter_cutoff(voiceId, hz);
+
+  void setFilterResonance(int voiceId, double resonance) =>
+      _bindings.justifier_voice_set_filter_resonance(voiceId, resonance);
+
+  // ---------------------------------------------------------------------------
   // Gate (envelope control)
   // ---------------------------------------------------------------------------
 
