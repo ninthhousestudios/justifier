@@ -26,6 +26,7 @@ execute_process(
 if(NOT FAUST_INCLUDEDIR_RESULT EQUAL 0)
     message(FATAL_ERROR "Could not determine Faust include directory via 'faust --includedir'")
 endif()
+file(TO_CMAKE_PATH "${FAUST_INCLUDE_DIR}" FAUST_INCLUDE_DIR)
 message(STATUS "Faust include dir: ${FAUST_INCLUDE_DIR}")
 
 # ---------------------------------------------------------------------------
@@ -79,8 +80,8 @@ set_target_properties(justifier_audio PROPERTIES
 target_compile_definitions(justifier_audio PRIVATE JUSTIFIER_BUILDING)
 
 install(TARGETS justifier_audio
-    LIBRARY DESTINATION lib
-    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION "lib"
+    RUNTIME DESTINATION "bin"
 )
 
 # Generated DSP files are #included directly by faust_wrapper.cpp, not compiled
