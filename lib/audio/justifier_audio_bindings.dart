@@ -261,17 +261,6 @@ class JustifierAudioBindings {
   late final _justifier_is_running = _justifier_is_runningPtr
       .asFunction<int Function()>();
 
-  int justifier_get_xrun_count() {
-    return _justifier_get_xrun_count();
-  }
-
-  late final _justifier_get_xrun_countPtr =
-      _lookup<ffi.NativeFunction<ffi.Int Function()>>(
-        'justifier_get_xrun_count',
-      );
-  late final _justifier_get_xrun_count = _justifier_get_xrun_countPtr
-      .asFunction<int Function()>();
-
   int justifier_get_active_voice_count() {
     return _justifier_get_active_voice_count();
   }

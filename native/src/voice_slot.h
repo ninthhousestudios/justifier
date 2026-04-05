@@ -25,6 +25,7 @@ typedef enum {
     VOICE_ACTIVE    = 1,
     VOICE_FADING    = 2,  // crossfade in progress
     VOICE_RELEASING = 3,  // gate off, release envelope running
+    VOICE_PENDING   = 4,  // reserved by UI thread, waiting for audio thread init
 } VoiceState;
 
 typedef struct {

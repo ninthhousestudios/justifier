@@ -43,7 +43,7 @@
 // DSP pool configuration
 // ---------------------------------------------------------------------------
 
-#define POOL_PER_TYPE 10   // 10 instances per waveform type = 70 total
+#define POOL_PER_TYPE 10   // 10 instances per waveform type (NUM_WAVEFORM_TYPES * 10 total)
 
 // The opaque FaustDSP struct (forward-declared in voice_slot.h).
 struct FaustDSP {

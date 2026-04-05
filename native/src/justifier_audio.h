@@ -103,7 +103,6 @@ JUSTIFIER_EXPORT void justifier_set_master_volume(float volume);
 
 // Status — safe to call from any thread (reads atomics, no locks)
 JUSTIFIER_EXPORT int  justifier_is_running(void);
-JUSTIFIER_EXPORT int  justifier_get_xrun_count(void);
 JUSTIFIER_EXPORT int  justifier_get_active_voice_count(void);
 
 #ifdef __cplusplus

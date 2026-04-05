@@ -91,7 +91,7 @@ class WorkspaceNotifier extends Notifier<WorkspaceState> {
           decay: defaults.decayTime,
           sustain: defaults.sustainLevel,
           release: defaults.releaseTime);
-      _engine.setGate(engineId, true);
+      _engine.setGate(engineId, false);
       _engine.setReverbSend(engineId, defaults.reverbSend);
       _engine.setDelaySend(engineId, defaults.delaySend);
       _engine.setChorusSend(engineId, defaults.chorusSend);
@@ -112,6 +112,74 @@ class WorkspaceNotifier extends Notifier<WorkspaceState> {
       }).toList(),
     );
     return voiceId;
+  }
+
+  /// Duplicate an existing voice (muted) and insert it right after the original.
+  String duplicateVoice(String waveId, String voiceId) {
+    final wave = state.waves.firstWhere((w) => w.id == waveId);
+    final source = wave.voices.firstWhere((v) => v.id == voiceId);
+    final newId = _uuid.v4();
+    final hz = source.frequencyHz(state.referenceHz);
+    final engineId = _engine.addVoice(source.waveform, hz, source.amplitude);
+    if (engineId >= 0) {
+      _engine.setGateTimes(engineId,
+          attack: source.attackTime,
+          decay: source.decayTime,
+          sustain: source.sustainLevel,
+          release: source.releaseTime);
+      _engine.setGate(engineId, false);
+      _engine.setPan(engineId, source.pan);
+      _engine.setDetune(engineId, source.detuneCents);
+      _engine.setModRatio(engineId, source.modRatio);
+      _engine.setModIndex(engineId, source.modIndex);
+      _engine.setFilterType(engineId, source.filterType);
+      _engine.setFilterCutoff(engineId, source.filterCutoff);
+      _engine.setFilterResonance(engineId, source.filterResonance);
+      _engine.setReverbSend(engineId, source.reverbSend);
+      _engine.setDelaySend(engineId, source.delaySend);
+      _engine.setChorusSend(engineId, source.chorusSend);
+      _engine.setPhaserSend(engineId, source.phaserSend);
+      _engine.setFlangerSend(engineId, source.flangerSend);
+      _engine.setEqSend(engineId, source.eqSend);
+      _engine.setSaturationSend(engineId, source.saturationSend);
+    }
+    final copy = Voice(
+      id: newId,
+      engineVoiceId: engineId >= 0 ? engineId : null,
+      waveform: source.waveform,
+      numerator: source.numerator,
+      denominator: source.denominator,
+      octave: source.octave,
+      amplitude: source.amplitude,
+      pan: source.pan,
+      detuneCents: source.detuneCents,
+      attackTime: source.attackTime,
+      decayTime: source.decayTime,
+      sustainLevel: source.sustainLevel,
+      releaseTime: source.releaseTime,
+      enabled: false,
+      modRatio: source.modRatio,
+      modIndex: source.modIndex,
+      filterType: source.filterType,
+      filterCutoff: source.filterCutoff,
+      filterResonance: source.filterResonance,
+      reverbSend: source.reverbSend,
+      delaySend: source.delaySend,
+      chorusSend: source.chorusSend,
+      phaserSend: source.phaserSend,
+      flangerSend: source.flangerSend,
+      eqSend: source.eqSend,
+      saturationSend: source.saturationSend,
+    );
+    state = state.copyWith(
+      waves: state.waves.map((w) {
+        if (w.id != waveId) return w;
+        final idx = w.voices.indexWhere((v) => v.id == voiceId);
+        final newVoices = [...w.voices]..insert(idx + 1, copy);
+        return w.copyWith(voices: newVoices);
+      }).toList(),
+    );
+    return newId;
   }
 
   void removeVoice(String waveId, String voiceId) {
@@ -257,24 +325,6 @@ class WorkspaceNotifier extends Notifier<WorkspaceState> {
       _engine.setGate(voice.engineVoiceId!, newEnabled);
     }
     updateVoice(waveId, voiceId, voice.copyWith(enabled: newEnabled));
-  }
-
-  void setFilterType(String waveId, String voiceId, int type) {
-    final wave = state.waves.firstWhere((w) => w.id == waveId);
-    final voice = wave.voices.firstWhere((v) => v.id == voiceId);
-    updateVoice(waveId, voiceId, voice.copyWith(filterType: type));
-  }
-
-  void setFilterCutoff(String waveId, String voiceId, double hz) {
-    final wave = state.waves.firstWhere((w) => w.id == waveId);
-    final voice = wave.voices.firstWhere((v) => v.id == voiceId);
-    updateVoice(waveId, voiceId, voice.copyWith(filterCutoff: hz));
-  }
-
-  void setFilterResonance(String waveId, String voiceId, double resonance) {
-    final wave = state.waves.firstWhere((w) => w.id == waveId);
-    final voice = wave.voices.firstWhere((v) => v.id == voiceId);
-    updateVoice(waveId, voiceId, voice.copyWith(filterResonance: resonance));
   }
 
   void setReverbReturn(double level) {

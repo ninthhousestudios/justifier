@@ -10,12 +10,3 @@ final engineProvider = Provider<AudioEngine>((ref) {
   return engine;
 });
 
-/// Whether the audio engine is currently running.
-final engineRunningProvider = Provider<bool>((ref) {
-  return ref.read(engineProvider).isRunning;
-});
-
-/// Number of active voices in the engine.
-final activeVoiceCountProvider = Provider<int>((ref) {
-  return ref.read(engineProvider).activeVoiceCount;
-});

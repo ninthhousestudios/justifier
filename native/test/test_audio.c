@@ -37,7 +37,6 @@ int main(int argc, char* argv[]) {
     CHECK(result == 0, "justifier_init returns 0");
     CHECK(justifier_is_running() == 1, "engine is running after init");
     CHECK(justifier_get_active_voice_count() == 0, "no active voices after init");
-    CHECK(justifier_get_xrun_count() == 0, "no xruns after init");
 
     // --- 2: Sine wave ---
     TEST("Sine wave at 440 Hz");
@@ -329,13 +328,11 @@ int main(int argc, char* argv[]) {
 
     // --- 15: Shutdown ---
     TEST("Shutdown");
-    int xruns = justifier_get_xrun_count();
     justifier_shutdown();
     CHECK(justifier_is_running() == 0, "engine stopped after shutdown");
 
     printf("\n========================================\n");
     printf("ALL TESTS PASSED\n");
-    printf("Xruns during test: %d\n", xruns);
     printf("========================================\n");
 
     return 0;

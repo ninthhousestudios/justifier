@@ -163,7 +163,6 @@ class AudioEngine {
   // ---------------------------------------------------------------------------
 
   bool get isRunning => _bindings.justifier_is_running() != 0;
-  int get xrunCount => _bindings.justifier_get_xrun_count();
   int get activeVoiceCount => _bindings.justifier_get_active_voice_count();
 
   // ---------------------------------------------------------------------------

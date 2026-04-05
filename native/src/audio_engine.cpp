@@ -32,7 +32,6 @@ typedef struct {
     ma_device       device;
     moodycamel::ReaderWriterQueue<ControlMessage>* control_queue;
     std::atomic<bool> is_silent;          // panic flag — checked first in callback
-    std::atomic<int>  xrun_count;
     std::atomic<int>  active_voice_count;
     float           master_volume;
     FaustDSP*       reverb_dsp;        // singleton from faust_wrapper
@@ -51,7 +50,7 @@ typedef struct {
     float           saturation_return_level;
     int             sample_rate;
     int             buffer_size;
-    bool            running;
+    std::atomic<bool> running;
 } AudioEngine;
 
 static AudioEngine g_engine;
@@ -68,7 +67,7 @@ static void apply_control_message(AudioEngine* eng, const ControlMessage* msg) {
         case MSG_VOICE_ADD: {
             if (id < 0 || id >= MAX_VOICES) break;
             VoiceSlot* slot = &eng->voices[id];
-            if (slot->state.load() != VOICE_FREE) break;  // slot raced, skip
+            if (slot->state.load() != VOICE_PENDING) break;  // not reserved by UI thread
 
             slot->dsp = faust_wrapper_acquire((WaveformType)msg->voice_add.waveform_type);
             if (!slot->dsp) break;  // pool exhausted
@@ -108,7 +107,7 @@ static void apply_control_message(AudioEngine* eng, const ControlMessage* msg) {
             faust_wrapper_set_param(slot->dsp, "filter_cutoff", slot->filter_cutoff);
             faust_wrapper_set_param(slot->dsp, "filter_res",    slot->filter_resonance);
 
-            slot->state.store(VOICE_ACTIVE);
+            slot->state.store(VOICE_ACTIVE);  // PENDING -> ACTIVE, now safe for audio callback
             eng->active_voice_count.fetch_add(1);
             break;
         }
@@ -210,7 +209,10 @@ static void apply_control_message(AudioEngine* eng, const ControlMessage* msg) {
             VoiceSlot* slot = &eng->voices[id];
             int state = slot->state.load();
             if (state == VOICE_FREE) break;
-            faust_wrapper_set_param(slot->dsp, "gate", msg->int_value ? 1.0f : 0.0f);
+            float gate_val = msg->int_value ? 1.0f : 0.0f;
+            faust_wrapper_set_param(slot->dsp, "gate", gate_val);
+            if (slot->dsp_pending)
+                faust_wrapper_set_param(slot->dsp_pending, "gate", gate_val);
             // Re-gate: if turning gate ON while releasing, return to ACTIVE
             if (msg->int_value && state == VOICE_RELEASING) {
                 slot->release_samples_remaining = 0;
@@ -387,25 +389,24 @@ static void audio_callback(ma_device* device, void* output,
     // 3. Clear stereo output buffer
     memset(out, 0, frame_count * 2 * sizeof(float));
 
-    // 4. Per-voice mono compute buffer (stack — no allocation)
-    float tmp[JUSTIFIER_MAX_BUFFER_SIZE];
+    // 4. Per-voice mono compute buffer (static — callback is single-threaded)
+    static float tmp[JUSTIFIER_MAX_BUFFER_SIZE];
 
-    // 4b. Send bus buffers — one stereo pair per effect (stack-allocated)
-    // 7 effects * 2 channels * 4096 samples * 4 bytes = 224 KB max
-    float send_reverb_L[JUSTIFIER_MAX_BUFFER_SIZE];
-    float send_reverb_R[JUSTIFIER_MAX_BUFFER_SIZE];
-    float send_delay_L[JUSTIFIER_MAX_BUFFER_SIZE];
-    float send_delay_R[JUSTIFIER_MAX_BUFFER_SIZE];
-    float send_chorus_L[JUSTIFIER_MAX_BUFFER_SIZE];
-    float send_chorus_R[JUSTIFIER_MAX_BUFFER_SIZE];
-    float send_phaser_L[JUSTIFIER_MAX_BUFFER_SIZE];
-    float send_phaser_R[JUSTIFIER_MAX_BUFFER_SIZE];
-    float send_flanger_L[JUSTIFIER_MAX_BUFFER_SIZE];
-    float send_flanger_R[JUSTIFIER_MAX_BUFFER_SIZE];
-    float send_eq_L[JUSTIFIER_MAX_BUFFER_SIZE];
-    float send_eq_R[JUSTIFIER_MAX_BUFFER_SIZE];
-    float send_sat_L[JUSTIFIER_MAX_BUFFER_SIZE];
-    float send_sat_R[JUSTIFIER_MAX_BUFFER_SIZE];
+    // 4b. Send bus buffers — one stereo pair per effect (static to avoid ~240KB stack pressure)
+    static float send_reverb_L[JUSTIFIER_MAX_BUFFER_SIZE];
+    static float send_reverb_R[JUSTIFIER_MAX_BUFFER_SIZE];
+    static float send_delay_L[JUSTIFIER_MAX_BUFFER_SIZE];
+    static float send_delay_R[JUSTIFIER_MAX_BUFFER_SIZE];
+    static float send_chorus_L[JUSTIFIER_MAX_BUFFER_SIZE];
+    static float send_chorus_R[JUSTIFIER_MAX_BUFFER_SIZE];
+    static float send_phaser_L[JUSTIFIER_MAX_BUFFER_SIZE];
+    static float send_phaser_R[JUSTIFIER_MAX_BUFFER_SIZE];
+    static float send_flanger_L[JUSTIFIER_MAX_BUFFER_SIZE];
+    static float send_flanger_R[JUSTIFIER_MAX_BUFFER_SIZE];
+    static float send_eq_L[JUSTIFIER_MAX_BUFFER_SIZE];
+    static float send_eq_R[JUSTIFIER_MAX_BUFFER_SIZE];
+    static float send_sat_L[JUSTIFIER_MAX_BUFFER_SIZE];
+    static float send_sat_R[JUSTIFIER_MAX_BUFFER_SIZE];
     memset(send_reverb_L, 0, frame_count * sizeof(float));
     memset(send_reverb_R, 0, frame_count * sizeof(float));
     memset(send_delay_L, 0, frame_count * sizeof(float));
@@ -431,14 +432,14 @@ static void audio_callback(ma_device* device, void* output,
     // 5. Mix all active voices
     for (int i = 0; i < MAX_VOICES; i++) {
         int state = eng->voices[i].state.load(std::memory_order_relaxed);
-        if (state == VOICE_FREE) continue;
+        if (state == VOICE_FREE || state == VOICE_PENDING) continue;
 
         VoiceSlot* slot = &eng->voices[i];
 
         if (state == VOICE_FADING && slot->dsp_pending) {
             // Crossfade: run both old and new DSP for 20ms overlap
-            float tmp_old[JUSTIFIER_MAX_BUFFER_SIZE];
-            float tmp_new[JUSTIFIER_MAX_BUFFER_SIZE];
+            static float tmp_old[JUSTIFIER_MAX_BUFFER_SIZE];
+            static float tmp_new[JUSTIFIER_MAX_BUFFER_SIZE];
             faust_wrapper_compute(slot->dsp,         (int)frame_count, tmp_old);
             faust_wrapper_compute(slot->dsp_pending, (int)frame_count, tmp_new);
 
@@ -522,7 +523,8 @@ static void audio_callback(ma_device* device, void* output,
                 faust_wrapper_release(slot->dsp);
                 slot->dsp = NULL;
                 slot->state.store(VOICE_FREE);
-                eng->active_voice_count.fetch_sub(1);
+                if (eng->active_voice_count.load() > 0)
+                    eng->active_voice_count.fetch_sub(1);
             }
         } else {
             // Normal active voice
@@ -593,7 +595,6 @@ int justifier_init(int sample_rate, int buffer_size) {
     g_engine.buffer_size   = buffer_size;
     g_engine.master_volume = 1.0f;
     g_engine.is_silent.store(false);
-    g_engine.xrun_count.store(0);
     g_engine.active_voice_count.store(0);
 
     for (int i = 0; i < MAX_VOICES; i++) {
@@ -695,7 +696,10 @@ int justifier_voice_add(WaveformType type, float frequency, float amplitude) {
     int start = g_voice_id_counter.fetch_add(1) % MAX_VOICES;
     for (int i = 0; i < MAX_VOICES; i++) {
         int idx = (start + i) % MAX_VOICES;
-        if (g_engine.voices[idx].state.load() == VOICE_FREE) {
+        // Atomically reserve the slot to prevent TOCTOU race.
+        // VOICE_PENDING keeps the audio callback from rendering before DSP is init'd.
+        int expected = VOICE_FREE;
+        if (g_engine.voices[idx].state.compare_exchange_strong(expected, VOICE_PENDING)) {
             ControlMessage msg = {};
             msg.type                    = MSG_VOICE_ADD;
             msg.voice_id                = idx;
@@ -820,10 +824,6 @@ void justifier_set_master_volume(float volume) {
 
 int justifier_is_running(void) {
     return g_engine.running ? 1 : 0;
-}
-
-int justifier_get_xrun_count(void) {
-    return g_engine.xrun_count.load();
 }
 
 int justifier_get_active_voice_count(void) {

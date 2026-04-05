@@ -117,7 +117,7 @@ class Voice {
     this.decayTime = 0.3,
     this.sustainLevel = 0.8,
     this.releaseTime = 2.0,
-    this.enabled = true,
+    this.enabled = false,
     this.dying = false,
     this.modRatio = 1.0,
     this.modIndex = 0.0,

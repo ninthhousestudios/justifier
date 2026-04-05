@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -371,9 +372,12 @@ class _VoiceCardState extends ConsumerState<VoiceCard> {
             ),
           ),
           // Waveform name
-          Text(
-            voice.waveform.name,
-            style: AppTheme.monoSmall.copyWith(color: accentColor),
+          Flexible(
+            child: Text(
+              voice.waveform.name,
+              style: AppTheme.monoSmall.copyWith(color: accentColor),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           if (voice.waveform.isPitched) ...[
             const SizedBox(width: 6),
@@ -390,6 +394,24 @@ class _VoiceCardState extends ConsumerState<VoiceCard> {
             ),
           ],
           const Spacer(),
+          // Copy voice
+          SizedBox(
+            width: 24,
+            height: 24,
+            child: IconButton(
+              onPressed: () => ref
+                  .read(workspaceProvider.notifier)
+                  .duplicateVoice(widget.waveId, voice.id),
+              icon: Icon(
+                Icons.copy_rounded,
+                size: 14,
+                color: dimColor,
+              ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+              tooltip: 'Duplicate voice (muted)',
+            ),
+          ),
           // Mute toggle
           SizedBox(
             width: 24,
@@ -623,21 +645,26 @@ class _DyingBar extends StatefulWidget {
 class _DyingBarState extends State<_DyingBar> {
   late final Stopwatch _stopwatch;
   late final Duration _total;
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _total = Duration(milliseconds: (widget.releaseTime * 1000).round());
     _stopwatch = Stopwatch()..start();
-    _tick();
+    _timer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+      if (_stopwatch.elapsed >= _total) {
+        _timer?.cancel();
+        _timer = null;
+      }
+      setState(() {});
+    });
   }
 
-  void _tick() {
-    if (!mounted) return;
-    setState(() {});
-    if (_stopwatch.elapsed < _total) {
-      Future.delayed(const Duration(milliseconds: 100), _tick);
-    }
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   @override

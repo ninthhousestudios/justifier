@@ -29,9 +29,6 @@ class FakeAudioEngine implements AudioEngine {
   bool get isRunning => _running;
 
   @override
-  int get xrunCount => 0;
-
-  @override
   int get activeVoiceCount => 0;
 
   @override

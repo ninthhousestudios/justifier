@@ -66,7 +66,6 @@ void main() {
       expect(result, 0, reason: 'init should return 0 on success');
       expect(bindings.justifier_is_running(), isNot(0));
       expect(bindings.justifier_get_active_voice_count(), 0);
-      expect(bindings.justifier_get_xrun_count(), 0);
 
       // Add a voice — returns synchronously, but SPSC queue means the
       // audio thread hasn't processed it yet. The ID should be valid.
