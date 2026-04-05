@@ -1,4 +1,5 @@
 import("stdfaust.lib");
+import("justifier_filter.lib");
 freq = nentry("freq", 440.0, 0.1, 20000.0, 0.01) : si.smoo;
 amp = nentry("amp", 0.0, 0.0, 1.0, 0.001) : si.smoo;
 gate = nentry("gate", 0, 0, 1, 1);
@@ -8,4 +9,4 @@ detune = nentry("detune", 0.0, -100.0, 100.0, 0.01);
 detuned_freq = freq * 2.0^(detune / 1200.0);
 envelope = en.are(attack, release, gate);
 // Linear interpolated random values at detuned_freq rate
-process = no.lfnoise(detuned_freq) * amp * envelope;
+process = no.lfnoise(detuned_freq) : jf_filter : *(amp) : *(envelope);

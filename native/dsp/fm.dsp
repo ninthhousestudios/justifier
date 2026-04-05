@@ -1,4 +1,5 @@
 import("stdfaust.lib");
+import("justifier_filter.lib");
 freq = nentry("freq", 440.0, 20.0, 20000.0, 0.01) : si.smoo;
 amp = nentry("amp", 0.0, 0.0, 1.0, 0.001) : si.smoo;
 gate = nentry("gate", 0, 0, 1, 1);
@@ -11,4 +12,4 @@ effective_freq = freq * 2.0^(detune / 1200.0);
 modulator = os.osc(effective_freq * mod_ratio) * mod_index * effective_freq;
 carrier = os.osc(effective_freq + modulator);
 envelope = en.are(attack, release, gate);
-process = carrier * amp * envelope;
+process = carrier : jf_filter : *(amp) : *(envelope);
