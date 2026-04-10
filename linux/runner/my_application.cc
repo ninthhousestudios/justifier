@@ -25,14 +25,15 @@ static void my_application_activate(GApplication* application) {
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
 
-  // Always create a GTK header bar so window_manager can find and hide it
-  // when TitleBarStyle.hidden is set. Without this, window_manager falls back
-  // to gtk_window_set_decorated which doesn't work on all WMs.
+  // Suppress all title bar decorations. Belt-and-suspenders:
+  // 1. Create a hidden GtkHeaderBar so window_manager finds it and hides it.
+  // 2. Immediately hide it ourselves (don't wait for Flutter's set_title_bar_style).
+  // 3. Also set decorated=FALSE to remove server-side decorations.
   GtkHeaderBar* header_bar = GTK_HEADER_BAR(gtk_header_bar_new());
-  gtk_widget_show(GTK_WIDGET(header_bar));
-  gtk_header_bar_set_title(header_bar, "Justifier");
-  gtk_header_bar_set_show_close_button(header_bar, TRUE);
+  gtk_header_bar_set_show_close_button(header_bar, FALSE);
   gtk_window_set_titlebar(window, GTK_WIDGET(header_bar));
+  gtk_widget_set_visible(GTK_WIDGET(header_bar), FALSE);
+  gtk_window_set_decorated(window, FALSE);
 
   gtk_window_set_default_size(window, 1280, 720);
 

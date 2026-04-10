@@ -9,8 +9,8 @@ import 'lattice_canvas.dart';
 import 'lattice_controls.dart';
 import 'lattice_node_widget.dart';
 
-/// The main lattice explorer panel. Owns an [InteractiveViewer] over a 10000×10000
-/// virtual canvas with the JI lattice origin at (5000, 5000).
+/// The main lattice explorer panel. Shows a bounded grid of JI ratios
+/// (±[latticeRange] steps on each axis) with pan/zoom via [InteractiveViewer].
 class LatticePanel extends ConsumerStatefulWidget {
   const LatticePanel({super.key});
 
@@ -19,25 +19,27 @@ class LatticePanel extends ConsumerStatefulWidget {
 }
 
 class _LatticePanelState extends ConsumerState<LatticePanel> {
-  static const double gridSpacing = 80.0;
-  static const double _canvasSize = 10000.0;
-  static const double _canvasOrigin = 5000.0;
-  static const double _nodeSize = 48.0;
+  /// How many steps in each direction from origin.
+  static const int latticeRange = 4;
+  static const double gridSpacing = 90.0;
+  static const double _nodeSize = 56.0;
+  static const double _padding = 60.0;
+
+  /// Canvas size derived from the fixed range.
+  static const double _canvasSize =
+      (latticeRange * 2 + 1) * gridSpacing + _padding * 2;
+
+  /// Origin pixel position within the canvas.
+  static const double _originX = _canvasSize / 2;
+  static const double _originY = _canvasSize / 2;
 
   late final TransformationController _ctrl;
-
-  /// Set to false after we center the transform on first layout.
   bool _needsCenter = true;
 
   @override
   void initState() {
     super.initState();
-    // Set a reasonable default transform before adding the listener.
-    // Will be adjusted to actual widget size on first layout.
-    _ctrl = TransformationController(
-      Matrix4.identity()
-        ..setTranslationRaw(-_canvasOrigin, -_canvasOrigin, 0),
-    );
+    _ctrl = TransformationController();
     _ctrl.addListener(_onTransformChanged);
   }
 
@@ -49,50 +51,25 @@ class _LatticePanelState extends ConsumerState<LatticePanel> {
   }
 
   void _onTransformChanged() {
-    // Trigger a rebuild so _buildNodes() recomputes the visible viewport.
     setState(() {});
   }
 
-  /// Invert the current transform to find which part of the canvas is visible.
-  /// Returns the viewport in lattice coordinate space (grid steps, not pixels).
-  Rect _computeVisibleViewport(Size widgetSize) {
-    final inverse = _ctrl.value.clone()..invert();
-
-    // Transform the four viewport corners into canvas space.
-    final tl = MatrixUtils.transformPoint(inverse, Offset.zero);
-    final tr = MatrixUtils.transformPoint(inverse, Offset(widgetSize.width, 0));
-    final bl = MatrixUtils.transformPoint(inverse, Offset(0, widgetSize.height));
-    final br = MatrixUtils.transformPoint(
-        inverse, Offset(widgetSize.width, widgetSize.height));
-
-    final canvasRect = Rect.fromPoints(
-      Offset(
-        [tl.dx, tr.dx, bl.dx, br.dx].reduce((a, b) => a < b ? a : b),
-        [tl.dy, tr.dy, bl.dy, br.dy].reduce((a, b) => a < b ? a : b),
-      ),
-      Offset(
-        [tl.dx, tr.dx, bl.dx, br.dx].reduce((a, b) => a > b ? a : b),
-        [tl.dy, tr.dy, bl.dy, br.dy].reduce((a, b) => a > b ? a : b),
-      ),
-    );
-
-    // Convert canvas pixels → lattice coordinates.
-    // Canvas pixel x = _canvasOrigin + a * gridSpacing  →  a = (x - _canvasOrigin) / gridSpacing
-    // Canvas pixel y = _canvasOrigin - b * gridSpacing  →  b = (_canvasOrigin - y) / gridSpacing
-    // Note: left/right in Rect align with a-axis; top/bottom are inverted for b-axis.
-    return Rect.fromLTRB(
-      (canvasRect.left - _canvasOrigin) / gridSpacing,
-      (_canvasOrigin - canvasRect.bottom) / gridSpacing, // b increases upward
-      (canvasRect.right - _canvasOrigin) / gridSpacing,
-      (_canvasOrigin - canvasRect.top) / gridSpacing,
-    );
+  void _centerView(Size widgetSize) {
+    _ctrl.removeListener(_onTransformChanged);
+    _ctrl.value = Matrix4.identity()
+      ..setTranslationRaw(
+        -_originX + widgetSize.width / 2,
+        -_originY + widgetSize.height / 2,
+        0,
+      );
+    _ctrl.addListener(_onTransformChanged);
   }
 
-  List<Widget> _buildNodes(Size widgetSize) {
+  List<Widget> _buildNodes() {
     final lattice = ref.watch(latticeProvider);
     final workspace = ref.watch(workspaceProvider);
 
-    // Build lookup: (numerator, denominator) → list of (waveId, Voice).
+    // Active voice lookup: (numerator, denominator) → list of (waveId, Voice).
     final Map<(int, int), List<(String, Voice)>> activeByRatio = {};
     for (final wave in workspace.waves) {
       for (final voice in wave.voices) {
@@ -103,12 +80,17 @@ class _LatticePanelState extends ConsumerState<LatticePanel> {
       }
     }
 
-    final viewport = _computeVisibleViewport(widgetSize);
     final mode = lattice.viewMode;
+    // Generate nodes for the fixed range.
+    final viewport = Rect.fromLTRB(
+      -latticeRange.toDouble(),
+      -latticeRange.toDouble(),
+      latticeRange.toDouble(),
+      latticeRange.toDouble(),
+    );
     final visibleNodes = generateVisibleNodes(mode, viewport);
 
-    // Collect all nodes to display: visible base nodes + higher-prime neighbors
-    // of expanded nodes.
+    // Collect nodes + higher-prime expansions.
     final allNodes = <LatticeNode>[];
     for (final node in visibleNodes) {
       allNodes.add(node);
@@ -117,17 +99,17 @@ class _LatticePanelState extends ConsumerState<LatticePanel> {
       }
     }
 
-    // Deduplicate by grid position (last writer wins — fine for display).
+    // Deduplicate by grid position. Base nodes take priority over
+    // higher-prime neighbors (which can round to the same grid cell).
     final Map<(int, int), LatticeNode> byGridPos = {};
     for (final n in allNodes) {
-      byGridPos[n.gridPosition] = n;
+      byGridPos.putIfAbsent(n.gridPosition, () => n);
     }
 
-    // Build connection list: pairs of active nodes that are Manhattan-distance 1 apart.
+    // Build connection list for active nodes.
     final activeGridPositions = <(int, int)>{};
     for (final node in byGridPos.values) {
-      final key = (node.numerator, node.denominator);
-      if (activeByRatio.containsKey(key)) {
+      if (activeByRatio.containsKey((node.numerator, node.denominator))) {
         activeGridPositions.add(node.gridPosition);
       }
     }
@@ -138,14 +120,13 @@ class _LatticePanelState extends ConsumerState<LatticePanel> {
       for (var j = i + 1; j < activeList.length; j++) {
         final (ai, bi) = activeList[i];
         final (aj, bj) = activeList[j];
-        final manhattan = (ai - aj).abs() + (bi - bj).abs();
-        if (manhattan == 1) {
+        if ((ai - aj).abs() + (bi - bj).abs() == 1) {
           connections.add((activeList[i], activeList[j]));
         }
       }
     }
 
-    // Build active node color map for the canvas painter.
+    // Active node color map for canvas painter.
     final Map<(int, int), Color> activeNodeColors = {};
     for (final entry in activeByRatio.entries) {
       final waveId = entry.value.first.$1;
@@ -156,17 +137,17 @@ class _LatticePanelState extends ConsumerState<LatticePanel> {
       activeNodeColors[entry.key] = wave.color;
     }
 
-    // Positioned node widgets.
     final widgets = <Widget>[];
 
-    // Canvas painter as the bottommost layer.
+    // Canvas painter (grid dots, crosshair, connections).
     widgets.add(
       CustomPaint(
         painter: LatticeCanvasPainter(
           activeNodes: activeNodeColors,
           connections: connections,
           gridSpacing: gridSpacing,
-          canvasCenter: const Offset(_canvasOrigin, _canvasOrigin),
+          canvasCenter: const Offset(_originX, _originY),
+          range: latticeRange,
         ),
         size: const Size(_canvasSize, _canvasSize),
       ),
@@ -175,8 +156,8 @@ class _LatticePanelState extends ConsumerState<LatticePanel> {
     // Node widgets.
     for (final node in byGridPos.values) {
       final (a, b) = node.gridPosition;
-      final left = _canvasOrigin + a * gridSpacing - _nodeSize / 2;
-      final top = _canvasOrigin - b * gridSpacing - _nodeSize / 2;
+      final left = _originX + a * gridSpacing - _nodeSize / 2;
+      final top = _originY - b * gridSpacing - _nodeSize / 2;
 
       final ratioKey = (node.numerator, node.denominator);
       final voicesHere = activeByRatio[ratioKey] ?? [];
@@ -224,37 +205,30 @@ class _LatticePanelState extends ConsumerState<LatticePanel> {
           final widgetSize =
               Size(constraints.maxWidth, constraints.maxHeight);
 
-          // Center the transform on first layout. We remove the listener
-          // temporarily to avoid setState-during-build.
           if (_needsCenter) {
             _needsCenter = false;
-            _ctrl.removeListener(_onTransformChanged);
-            _ctrl.value = Matrix4.identity()
-              ..setTranslationRaw(
-                -_canvasOrigin + widgetSize.width / 2,
-                -_canvasOrigin + widgetSize.height / 2,
-                0,
-              );
-            _ctrl.addListener(_onTransformChanged);
+            _centerView(widgetSize);
           }
 
           return Stack(
             children: [
-              InteractiveViewer(
-                transformationController: _ctrl,
-                constrained: false,
-                minScale: 0.3,
-                maxScale: 4.0,
-                boundaryMargin: const EdgeInsets.all(double.infinity),
-                child: SizedBox(
-                  width: _canvasSize,
-                  height: _canvasSize,
-                  child: Stack(
-                    children: _buildNodes(widgetSize),
+              Center(
+                child: InteractiveViewer(
+                  transformationController: _ctrl,
+                  constrained: false,
+                  minScale: 0.4,
+                  maxScale: 3.0,
+                  boundaryMargin: const EdgeInsets.all(100),
+                  child: SizedBox(
+                    width: _canvasSize,
+                    height: _canvasSize,
+                    child: Stack(
+                      children: _buildNodes(),
+                    ),
                   ),
                 ),
               ),
-              // Controls overlay — always on top, not scrolled with the canvas.
+              // Controls overlay.
               Positioned(
                 top: 0,
                 left: 0,
@@ -262,13 +236,8 @@ class _LatticePanelState extends ConsumerState<LatticePanel> {
                 child: LatticeControls(
                   onHome: () {
                     if (context.mounted) {
-                      final size = MediaQuery.sizeOf(context);
-                      _ctrl.value = Matrix4.identity()
-                        ..setTranslationRaw(
-                          -_canvasOrigin + size.width / 2,
-                          -_canvasOrigin + size.height / 2,
-                          0,
-                        );
+                      _centerView(widgetSize);
+                      setState(() {});
                     }
                   },
                 ),

@@ -39,13 +39,13 @@ class LatticeNodeWidget extends ConsumerWidget {
   static const _violet = AppTheme.prometheusViolet;
 
   double get _size {
-    if (is1_1) return 30.0;
-    if (isActive) return 28.0;
-    if (isHigherPrime) return 18.0;
-    return 24.0;
+    if (is1_1) return 42.0;
+    if (isActive) return 38.0;
+    if (isHigherPrime) return 24.0;
+    return 34.0;
   }
 
-  double get _fontSize => is1_1 ? 10.0 : 8.0;
+  double get _fontSize => is1_1 ? 12.0 : 10.0;
 
   String _tooltipText() {
     final cents = ratioToCents(numerator, denominator);

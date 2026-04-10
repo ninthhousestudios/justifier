@@ -2,7 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
-/// Paints the static lattice background: grid dots, 1/1 crosshair, and
+/// Paints the lattice background: grid dots, 1/1 crosshair, and
 /// connection lines between active nodes.
 class LatticeCanvasPainter extends CustomPainter {
   const LatticeCanvasPainter({
@@ -10,18 +10,14 @@ class LatticeCanvasPainter extends CustomPainter {
     required this.connections,
     required this.gridSpacing,
     required this.canvasCenter,
+    required this.range,
   });
 
-  /// Ratio (numerator, denominator) → wave color for active nodes.
   final Map<(int, int), Color> activeNodes;
-
-  /// Pairs of grid positions (a, b) to draw connection lines between.
   final List<((int, int), (int, int))> connections;
-
   final double gridSpacing;
-
-  /// The pixel coordinate of lattice origin (0, 0) — typically (5000, 5000).
   final Offset canvasCenter;
+  final int range;
 
   Offset _gridToPixel(int a, int b) {
     return Offset(
@@ -32,17 +28,16 @@ class LatticeCanvasPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    _drawGridDots(canvas, size);
+    _drawGridDots(canvas);
     _drawCrosshair(canvas, size);
     _drawConnections(canvas);
   }
 
-  void _drawGridDots(Canvas canvas, Size size) {
+  void _drawGridDots(Canvas canvas) {
     final dotPaint = Paint()
       ..color = const Color(0xFF00FF00).withValues(alpha: 0.10)
       ..style = PaintingStyle.fill;
 
-    const int range = 20;
     for (var a = -range; a <= range; a++) {
       for (var b = -range; b <= range; b++) {
         final pixel = _gridToPixel(a, b);
@@ -57,18 +52,15 @@ class LatticeCanvasPainter extends CustomPainter {
       ..strokeWidth = 0.5
       ..style = PaintingStyle.stroke;
 
-    // Horizontal line through canvasCenter
-    canvas.drawLine(
-      Offset(0, canvasCenter.dy),
-      Offset(size.width, canvasCenter.dy),
-      crosshairPaint,
-    );
-    // Vertical line through canvasCenter
-    canvas.drawLine(
-      Offset(canvasCenter.dx, 0),
-      Offset(canvasCenter.dx, size.height),
-      crosshairPaint,
-    );
+    // Horizontal through origin.
+    final leftEdge = _gridToPixel(-range, 0);
+    final rightEdge = _gridToPixel(range, 0);
+    canvas.drawLine(leftEdge, rightEdge, crosshairPaint);
+
+    // Vertical through origin.
+    final topEdge = _gridToPixel(0, range);
+    final bottomEdge = _gridToPixel(0, -range);
+    canvas.drawLine(topEdge, bottomEdge, crosshairPaint);
   }
 
   void _drawConnections(Canvas canvas) {
@@ -88,7 +80,6 @@ class LatticeCanvasPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(LatticeCanvasPainter oldDelegate) {
-    // Always repaint — cheap for <200 nodes and correctness is paramount.
     return true;
   }
 }
