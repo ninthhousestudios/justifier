@@ -563,8 +563,8 @@ static void audio_callback(ma_device* device, void* output,
     // 6. Process effect send buses (each skipped when inactive)
     #define PROCESS_EFFECT(active, dsp_ptr, return_level, sL, sR) \
         if (active && dsp_ptr && return_level > 0.0f) { \
-            float ret_L[JUSTIFIER_MAX_BUFFER_SIZE]; \
-            float ret_R[JUSTIFIER_MAX_BUFFER_SIZE]; \
+            static float ret_L[JUSTIFIER_MAX_BUFFER_SIZE]; \
+            static float ret_R[JUSTIFIER_MAX_BUFFER_SIZE]; \
             faust_wrapper_compute_stereo(dsp_ptr, (int)frame_count, \
                                          sL, sR, ret_L, ret_R); \
             float wet = return_level * eng->master_volume; \

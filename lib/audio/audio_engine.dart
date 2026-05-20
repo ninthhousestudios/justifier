@@ -118,8 +118,7 @@ class AudioEngine {
   void setEqSend(int voiceId, double send) =>
       _bindings.justifier_voice_set_eq_send(voiceId, send);
 
-  void setEqReturn(double level) =>
-      _bindings.justifier_set_eq_return(level);
+  void setEqReturn(double level) => _bindings.justifier_set_eq_return(level);
 
   void setSaturationSend(int voiceId, double send) =>
       _bindings.justifier_voice_set_saturation_send(voiceId, send);
@@ -141,12 +140,12 @@ class AudioEngine {
     double sustain = 0.8,
     double release = 2.0,
   }) => _bindings.justifier_voice_set_gate_times(
-        voiceId,
-        attack,
-        decay,
-        sustain,
-        release,
-      );
+    voiceId,
+    attack,
+    decay,
+    sustain,
+    release,
+  );
 
   // ---------------------------------------------------------------------------
   // Global controls

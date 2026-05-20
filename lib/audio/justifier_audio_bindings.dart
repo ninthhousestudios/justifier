@@ -209,19 +209,12 @@ class JustifierAudioBindings {
   late final _justifier_voice_set_gate_timesPtr =
       _lookup<
         ffi.NativeFunction<
-          ffi.Void Function(
-            ffi.Int,
-            ffi.Float,
-            ffi.Float,
-            ffi.Float,
-            ffi.Float,
-          )
+          ffi.Void Function(ffi.Int, ffi.Float, ffi.Float, ffi.Float, ffi.Float)
         >
       >('justifier_voice_set_gate_times');
   late final _justifier_voice_set_gate_times =
-      _justifier_voice_set_gate_timesPtr.asFunction<
-        void Function(int, double, double, double, double)
-      >();
+      _justifier_voice_set_gate_timesPtr
+          .asFunction<void Function(int, double, double, double, double)>();
 
   void justifier_panic() {
     return _justifier_panic();
@@ -405,9 +398,8 @@ class JustifierAudioBindings {
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int, ffi.Float)>>(
         'justifier_voice_set_eq_send',
       );
-  late final _justifier_voice_set_eq_send =
-      _justifier_voice_set_eq_sendPtr
-          .asFunction<void Function(int, double)>();
+  late final _justifier_voice_set_eq_send = _justifier_voice_set_eq_sendPtr
+      .asFunction<void Function(int, double)>();
 
   void justifier_set_eq_return(double level) {
     return _justifier_set_eq_return(level);
