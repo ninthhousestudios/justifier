@@ -114,11 +114,12 @@ target_include_directories(justifier_audio PRIVATE
 )
 
 # Unix-specific libraries (pthread and libm don't exist on Windows)
+# Android bionic has pthreads built into libc — no separate -lpthread.
+if(UNIX AND NOT CMAKE_SYSTEM_NAME STREQUAL "Android")
+    target_link_libraries(justifier_audio PRIVATE pthread)
+endif()
 if(UNIX)
-    target_link_libraries(justifier_audio PRIVATE
-        pthread
-        m
-    )
+    target_link_libraries(justifier_audio PRIVATE m)
 endif()
 
 # Linux desktop: link ALSA for miniaudio ALSA backend
