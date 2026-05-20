@@ -47,6 +47,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Archived desktop UI
+desktop-ui/
+
 # AgentOps session artifacts
 .agents/
 .superpowers/

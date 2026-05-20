@@ -1,75 +1,92 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:window_manager/window_manager.dart';
 
-import 'core/persistence.dart';
-import 'providers/zoom_provider.dart';
 import 'theme/app_theme.dart';
-import 'widgets/app_shell.dart';
+import 'screens/home_screen.dart';
+import 'screens/tuner_screen.dart';
+import 'screens/drone_screen.dart';
+import 'screens/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final prefs = await SharedPreferences.getInstance();
-
-  await windowManager.ensureInitialized();
-  const windowOptions = WindowOptions(
-    size: Size(1280, 720),
-    center: true,
-    backgroundColor: Colors.black,
-    titleBarStyle: TitleBarStyle.hidden,
-    skipTaskbar: false,
-  );
-  await windowManager.waitUntilReadyToShow(windowOptions, () async {
-    await windowManager.show();
-    await windowManager.focus();
-  });
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
 
   runApp(
-    ProviderScope(
-      overrides: [
-        sharedPrefsProvider.overrideWithValue(prefs),
-      ],
-      child: const JustifierApp(),
+    const ProviderScope(
+      child: JustifierApp(),
     ),
   );
 }
 
-class JustifierApp extends ConsumerWidget {
+class JustifierApp extends StatelessWidget {
   const JustifierApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scale = ref.watch(zoomProvider);
-
+  Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Justifier',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark(),
-      builder: (context, child) {
-        final mq = MediaQuery.of(context);
-        return MediaQuery(
-          data: mq.copyWith(
-            textScaler: TextScaler.linear(scale),
-          ),
-          child: child!,
-        );
-      },
-      home: CallbackShortcuts(
-        bindings: {
-          const SingleActivator(LogicalKeyboardKey.equal, control: true):
-              () => zoomIn(ref),
-          const SingleActivator(LogicalKeyboardKey.minus, control: true):
-              () => zoomOut(ref),
-          const SingleActivator(LogicalKeyboardKey.digit0, control: true):
-              () => zoomReset(ref),
+      theme: AppTheme.justifier(),
+      home: const AppShell(),
+    );
+  }
+}
+
+class AppShell extends StatefulWidget {
+  const AppShell({super.key});
+
+  @override
+  State<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<AppShell> {
+  int _currentIndex = 0;
+
+  static const _screens = [
+    HomeScreen(),
+    TunerScreen(),
+    DroneScreen(),
+    SettingsScreen(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (index) {
+          setState(() => _currentIndex = index);
         },
-        child: const Focus(
-          autofocus: true,
-          child: AppShell(),
-        ),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.map_outlined),
+            selectedIcon: Icon(Icons.map),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.tune_outlined),
+            selectedIcon: Icon(Icons.tune),
+            label: 'Tuner',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.music_note_outlined),
+            selectedIcon: Icon(Icons.music_note),
+            label: 'Drone',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
+        ],
       ),
     );
   }
