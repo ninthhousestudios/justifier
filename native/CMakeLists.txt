@@ -66,7 +66,8 @@ else()
         HINTS /usr/include /usr/local/include $ENV{HOME}/.local/include
     )
     if(NOT FAUST_INCLUDE_DIR)
-        message(FATAL_ERROR "Faust headers (faust/dsp/dsp.h) not found. Install faust development headers.")
+        message(STATUS "System Faust headers not found — using vendored headers")
+        set(FAUST_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor")
     endif()
     message(STATUS "Faust include dir: ${FAUST_INCLUDE_DIR}")
 
@@ -76,19 +77,23 @@ endif()
 # ---------------------------------------------------------------------------
 # Library target
 # ---------------------------------------------------------------------------
-add_library(justifier_audio SHARED
-    src/audio_engine.cpp
-    src/faust_wrapper.cpp
-)
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    add_library(justifier_audio STATIC
+        src/audio_engine.cpp
+        src/faust_wrapper.cpp
+    )
+else()
+    add_library(justifier_audio SHARED
+        src/audio_engine.cpp
+        src/faust_wrapper.cpp
+    )
+    set_target_properties(justifier_audio PROPERTIES
+        C_VISIBILITY_PRESET hidden
+        CXX_VISIBILITY_PRESET hidden
+        VISIBILITY_INLINES_HIDDEN ON
+    )
+endif()
 
-# Only export justifier_* symbols, hide everything else
-set_target_properties(justifier_audio PROPERTIES
-    C_VISIBILITY_PRESET hidden
-    CXX_VISIBILITY_PRESET hidden
-    VISIBILITY_INLINES_HIDDEN ON
-)
-
-# Mark this TU as the library build (triggers dllexport on Windows)
 target_compile_definitions(justifier_audio PRIVATE JUSTIFIER_BUILDING)
 
 
@@ -116,29 +121,40 @@ if(UNIX)
     )
 endif()
 
-# Linux: link ALSA for miniaudio ALSA backend
-if(UNIX AND NOT APPLE)
+# Linux desktop: link ALSA for miniaudio ALSA backend
+if(UNIX AND NOT APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "Android")
     target_link_libraries(justifier_audio PRIVATE asound dl)
 endif()
 
-# macOS: link CoreAudio frameworks
+# Android: AAudio/OpenSL backends need android + log
+if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+    target_link_libraries(justifier_audio PRIVATE android log)
+endif()
+
+# Apple (macOS and iOS): CoreAudio frameworks
 if(APPLE)
     target_link_libraries(justifier_audio PRIVATE
         "-framework CoreAudio"
         "-framework AudioToolbox"
         "-framework CoreFoundation"
     )
+    if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        target_link_libraries(justifier_audio PRIVATE
+            "-framework AVFoundation"
+        )
+    endif()
 endif()
 
 # ---------------------------------------------------------------------------
-# Test harness target
+# Test harness target (desktop only)
 # ---------------------------------------------------------------------------
-add_executable(test_audio test/test_audio.c)
-target_link_libraries(test_audio PRIVATE justifier_audio)
-target_include_directories(test_audio PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-)
-# Link stdc++ on non-Windows (MSVC links C++ stdlib automatically)
-if(NOT WIN32)
-    target_link_libraries(test_audio PRIVATE stdc++)
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Android" AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    add_executable(test_audio test/test_audio.c)
+    target_link_libraries(test_audio PRIVATE justifier_audio)
+    target_include_directories(test_audio PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+    if(NOT WIN32)
+        target_link_libraries(test_audio PRIVATE stdc++)
+    endif()
 endif()
