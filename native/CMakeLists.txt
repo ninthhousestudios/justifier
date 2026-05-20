@@ -78,6 +78,10 @@ endif()
 # Library target
 # ---------------------------------------------------------------------------
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    enable_language(OBJCXX)
+    # miniaudio implementation includes <AVFoundation/AVFoundation.h> on iOS,
+    # which is Objective-C — compile as Objective-C++ so clang understands it.
+    set_source_files_properties(src/audio_engine.cpp PROPERTIES LANGUAGE OBJCXX)
     add_library(justifier_audio STATIC
         src/audio_engine.cpp
         src/faust_wrapper.cpp

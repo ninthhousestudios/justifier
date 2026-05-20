@@ -1,0 +1,21 @@
+PODS:
+  - Flutter (1.0.0)
+  - justifier_native (0.0.1)
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - justifier_native (from `../justifier_native`)
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  justifier_native:
+    :path: "../justifier_native"
+
+SPEC CHECKSUMS:
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  justifier_native: 2e5bfb0324445e936ab4d27603c7433550711149
+
+PODFILE CHECKSUM: 46e0739c37b99af9d9ac92b450e04fc9d99d0211
+
+COCOAPODS: 1.16.2

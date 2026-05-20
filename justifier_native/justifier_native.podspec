@@ -53,9 +53,11 @@ Pod::Spec.new do |s|
       CMAKE_EXTRA_ARGS="-DCMAKE_OSX_SYSROOT=iphoneos"
     fi
 
+    # Convert space-separated ARCHS to semicolon-separated CMake list
+    CMAKE_ARCHS=$(echo "${ARCHS}" | tr ' ' ';')
     cmake -S "${NATIVE_DIR}" -B "${BUILD_DIR}" \
       -DCMAKE_SYSTEM_NAME=iOS \
-      -DCMAKE_OSX_ARCHITECTURES="${ARCHS}" \
+      -DCMAKE_OSX_ARCHITECTURES="${CMAKE_ARCHS}" \
       -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
       -DCMAKE_BUILD_TYPE=Release \
       -DJUSTIFIER_REGEN_FAUST=OFF \
@@ -74,11 +76,15 @@ Pod::Spec.new do |s|
     {
       :name => 'Build justifier_audio via CMake (iOS)',
       :script => ios_build_script,
-      :execution_position => :before_compile
+      :execution_position => :before_compile,
+      :output_files => ['$(BUILT_PRODUCTS_DIR)/libjustifier_audio.a']
     }
   ]
 
-  s.ios.xcconfig = {
-    'OTHER_LDFLAGS' => '-force_load "${BUILT_PRODUCTS_DIR}/libjustifier_audio.a"'
+  s.ios.frameworks = 'CoreAudio', 'AudioToolbox', 'CoreFoundation', 'AVFoundation'
+  s.ios.libraries = 'c++'
+
+  s.ios.pod_target_xcconfig = {
+    'OTHER_LDFLAGS' => '-force_load "$(BUILT_PRODUCTS_DIR)/libjustifier_audio.a"'
   }
 end
