@@ -22,6 +22,7 @@ Pod::Spec.new do |s|
 
   macos_build_script = <<~SCRIPT
     set -euo pipefail
+    export PATH="/opt/homebrew/bin:/usr/local/bin:${PATH}"
     [[ "${PLATFORM_NAME}" == "macosx" ]] || exit 0
     NATIVE_DIR="#{native_dir}/native"
     BUILD_DIR="${NATIVE_DIR}/build-macos"
@@ -39,6 +40,7 @@ Pod::Spec.new do |s|
 
   ios_build_script = <<~SCRIPT
     set -euo pipefail
+    export PATH="/opt/homebrew/bin:/usr/local/bin:${PATH}"
     [[ "${PLATFORM_NAME}" == "iphoneos" || "${PLATFORM_NAME}" == "iphonesimulator" ]] || exit 0
     NATIVE_DIR="#{native_dir}/native"
     BUILD_DIR="${NATIVE_DIR}/build-ios-${PLATFORM_NAME}"
