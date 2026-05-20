@@ -169,6 +169,12 @@ class AudioEngine {
   // ---------------------------------------------------------------------------
 
   static DynamicLibrary _loadLibrary() {
+    if (Platform.isAndroid) {
+      return DynamicLibrary.open('libjustifier_audio.so');
+    }
+    if (Platform.isIOS) {
+      return DynamicLibrary.process();
+    }
     if (Platform.isMacOS) {
       // CMake builds libjustifier_audio.dylib; the podspec script_phase
       // copies it into the justifier_native framework inside the app bundle.
