@@ -60,6 +60,7 @@ class DroneNotifier extends Notifier<List<DroneVoice>> {
   }
 
   void removeVoice(int id) {
+    _engine.setAmplitude(id, 0);
     _engine.setGate(id, false);
     _engine.removeVoice(id);
     state = state.where((v) => v.id != id).toList();
