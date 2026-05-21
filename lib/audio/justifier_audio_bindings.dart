@@ -265,6 +265,53 @@ class JustifierAudioBindings {
   late final _justifier_get_active_voice_count =
       _justifier_get_active_voice_countPtr.asFunction<int Function()>();
 
+  // --- Pitch detection ---
+
+  int justifier_pitch_start() {
+    return _justifier_pitch_start();
+  }
+
+  late final _justifier_pitch_startPtr =
+      _lookup<ffi.NativeFunction<ffi.Int Function()>>('justifier_pitch_start');
+  late final _justifier_pitch_start =
+      _justifier_pitch_startPtr.asFunction<int Function()>();
+
+  void justifier_pitch_stop() {
+    return _justifier_pitch_stop();
+  }
+
+  late final _justifier_pitch_stopPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function()>>('justifier_pitch_stop');
+  late final _justifier_pitch_stop =
+      _justifier_pitch_stopPtr.asFunction<void Function()>();
+
+  void justifier_pitch_get(
+    ffi.Pointer<ffi.Float> hz,
+    ffi.Pointer<ffi.Float> confidence,
+  ) {
+    return _justifier_pitch_get(hz, confidence);
+  }
+
+  late final _justifier_pitch_getPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(
+    ffi.Pointer<ffi.Float>,
+    ffi.Pointer<ffi.Float>,
+  )>>('justifier_pitch_get');
+  late final _justifier_pitch_get = _justifier_pitch_getPtr
+      .asFunction<void Function(ffi.Pointer<ffi.Float>, ffi.Pointer<ffi.Float>)>();
+
+  int justifier_pitch_is_running() {
+    return _justifier_pitch_is_running();
+  }
+
+  late final _justifier_pitch_is_runningPtr =
+      _lookup<ffi.NativeFunction<ffi.Int Function()>>(
+        'justifier_pitch_is_running',
+      );
+  late final _justifier_pitch_is_running =
+      _justifier_pitch_is_runningPtr.asFunction<int Function()>();
+
   void justifier_voice_set_reverb_send(int voice_id, double send) {
     return _justifier_voice_set_reverb_send(voice_id, send);
   }

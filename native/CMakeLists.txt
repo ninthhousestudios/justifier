@@ -85,11 +85,14 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     add_library(justifier_audio STATIC
         src/audio_engine.cpp
         src/faust_wrapper.cpp
+        src/pitch_detector.cpp
+        src/ios_audio_session.m
     )
 else()
     add_library(justifier_audio SHARED
         src/audio_engine.cpp
         src/faust_wrapper.cpp
+        src/pitch_detector.cpp
     )
     set_target_properties(justifier_audio PROPERTIES
         C_VISIBILITY_PRESET hidden

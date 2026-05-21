@@ -1,6 +1,8 @@
 import 'dart:ffi';
 import 'dart:io';
 
+import 'package:ffi/ffi.dart';
+
 import 'justifier_audio_bindings.dart';
 import 'waveform_type.dart';
 
@@ -8,10 +10,19 @@ import 'waveform_type.dart';
 ///
 /// Loads the platform-specific shared library and exposes typed methods
 /// using [WaveformType] instead of raw C enum integers.
+class PitchResult {
+  const PitchResult(this.hz, this.confidence);
+  final double hz;
+  final double confidence;
+  bool get isValid => hz > 0 && confidence > 0.7;
+}
+
 class AudioEngine {
   AudioEngine() : _bindings = JustifierAudioBindings(_loadLibrary());
 
   final JustifierAudioBindings _bindings;
+  final Pointer<Float> _pitchHz = calloc<Float>();
+  final Pointer<Float> _pitchConf = calloc<Float>();
 
   // ---------------------------------------------------------------------------
   // Engine lifecycle
@@ -23,7 +34,12 @@ class AudioEngine {
   }
 
   /// Shut down the audio engine and release all resources.
-  void shutdown() => _bindings.justifier_shutdown();
+  void shutdown() {
+    pitchStop();
+    _bindings.justifier_shutdown();
+    calloc.free(_pitchHz);
+    calloc.free(_pitchConf);
+  }
 
   // ---------------------------------------------------------------------------
   // Voice management
@@ -163,6 +179,21 @@ class AudioEngine {
 
   bool get isRunning => _bindings.justifier_is_running() != 0;
   int get activeVoiceCount => _bindings.justifier_get_active_voice_count();
+
+  // ---------------------------------------------------------------------------
+  // Pitch detection
+  // ---------------------------------------------------------------------------
+
+  bool pitchStart() => _bindings.justifier_pitch_start() == 0;
+
+  void pitchStop() => _bindings.justifier_pitch_stop();
+
+  PitchResult pitchGet() {
+    _bindings.justifier_pitch_get(_pitchHz, _pitchConf);
+    return PitchResult(_pitchHz.value, _pitchConf.value);
+  }
+
+  bool get pitchIsRunning => _bindings.justifier_pitch_is_running() != 0;
 
   // ---------------------------------------------------------------------------
   // Library loading

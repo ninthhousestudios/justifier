@@ -105,6 +105,12 @@ JUSTIFIER_EXPORT void justifier_set_master_volume(float volume);
 JUSTIFIER_EXPORT int  justifier_is_running(void);
 JUSTIFIER_EXPORT int  justifier_get_active_voice_count(void);
 
+// Pitch detection (separate capture device + MPM)
+JUSTIFIER_EXPORT int  justifier_pitch_start(void);
+JUSTIFIER_EXPORT void justifier_pitch_stop(void);
+JUSTIFIER_EXPORT void justifier_pitch_get(float* hz, float* confidence);
+JUSTIFIER_EXPORT int  justifier_pitch_is_running(void);
+
 #ifdef __cplusplus
 }
 #endif
