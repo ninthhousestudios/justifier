@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../tuner/pitch_state.dart';
+import '../tuner/ratio_match_provider.dart';
 
 class TunerScreen extends ConsumerWidget {
   const TunerScreen({super.key});
@@ -10,6 +11,7 @@ class TunerScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final pitch = ref.watch(pitchProvider);
     final notifier = ref.read(pitchProvider.notifier);
+    final match = ref.watch(ratioMatchProvider);
     final theme = Theme.of(context);
 
     return SafeArea(
@@ -32,23 +34,35 @@ class TunerScreen extends ConsumerWidget {
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-          ] else if (pitch.isRunning && pitch.isValid) ...[
+          ] else if (pitch.isRunning && match != null) ...[
             Text(
-              '${pitch.hz.toStringAsFixed(1)} Hz',
-              style: theme.textTheme.displayMedium?.copyWith(
+              match.ratio.label,
+              style: theme.textTheme.displayLarge?.copyWith(
                 color: theme.colorScheme.primary,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 8),
-            _ConfidenceBar(confidence: pitch.confidence),
+            if (match.ratio.name != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  match.ratio.name!,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 16),
+            _CentsDisplay(cents: match.deviationCents),
             const SizedBox(height: 16),
             Text(
-              'confidence: ${(pitch.confidence * 100).toStringAsFixed(0)}%',
+              '${pitch.hz.toStringAsFixed(1)} Hz',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
+            const SizedBox(height: 8),
+            _ConfidenceBar(confidence: pitch.confidence),
           ] else if (pitch.isRunning) ...[
             Icon(Icons.mic, size: 64, color: theme.colorScheme.onSurfaceVariant),
             const SizedBox(height: 16),
@@ -88,6 +102,32 @@ class TunerScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CentsDisplay extends StatelessWidget {
+  const _CentsDisplay({required this.cents});
+
+  final double cents;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final absCents = cents.abs();
+    final sign = cents >= 0 ? '+' : '−';
+    final color = absCents < 5
+        ? Colors.green
+        : absCents < 15
+            ? Colors.amber
+            : theme.colorScheme.error;
+
+    return Text(
+      '$sign${absCents.toStringAsFixed(1)}¢',
+      style: theme.textTheme.headlineMedium?.copyWith(
+        color: color,
+        fontWeight: FontWeight.bold,
       ),
     );
   }
