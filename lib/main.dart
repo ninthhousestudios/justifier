@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'theme/app_theme.dart';
-import 'screens/home_screen.dart';
+import 'screens/explore_screen.dart';
 import 'screens/tuner_screen.dart';
 import 'screens/drone_screen.dart';
 import 'screens/settings_screen.dart';
@@ -41,7 +41,7 @@ class _AppShellState extends State<AppShell> {
   int _currentIndex = 0;
 
   static const _screens = [
-    HomeScreen(),
+    ExploreScreen(),
     TunerScreen(),
     DroneScreen(),
     SettingsScreen(),
@@ -60,7 +60,7 @@ class _AppShellState extends State<AppShell> {
           NavigationDestination(
             icon: Icon(Icons.map_outlined),
             selectedIcon: Icon(Icons.map),
-            label: 'Home',
+            label: 'Explore',
           ),
           NavigationDestination(
             icon: Icon(Icons.tune_outlined),

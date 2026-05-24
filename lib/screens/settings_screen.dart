@@ -46,7 +46,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
               const SizedBox(width: 16),
               SizedBox(
-                width: 120,
+                width: 130,
                 child: TextFormField(
                   key: ValueKey(reference.hz),
                   initialValue: reference.hz.toStringAsFixed(2),
