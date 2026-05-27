@@ -127,6 +127,8 @@ class _Toggles extends StatelessWidget {
               labelStyle),
           _toggleRow(
               'Show Hz', settings.showHz, notifier.setShowHz, labelStyle),
+          _sliderRow(settings.toleranceCents, notifier.setToleranceCents,
+              labelStyle),
         ],
       ),
     );
@@ -145,6 +147,32 @@ class _Toggles extends StatelessWidget {
             child: FittedBox(
               child: Switch(value: value, onChanged: onChanged),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sliderRow(
+      double value, ValueChanged<double> onChanged, TextStyle? style) {
+    return SizedBox(
+      height: 36,
+      child: Row(
+        children: [
+          Text('Tolerance', style: style),
+          Expanded(
+            child: Slider(
+              value: value,
+              min: 2,
+              max: 15,
+              divisions: 13,
+              onChanged: onChanged,
+            ),
+          ),
+          SizedBox(
+            width: 32,
+            child: Text('${value.round()}¢', style: style,
+                textAlign: TextAlign.right),
           ),
         ],
       ),

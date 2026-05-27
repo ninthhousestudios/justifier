@@ -5,7 +5,7 @@ import 'pitch_state.dart';
 import 'ratio.dart';
 import 'tuner_settings_state.dart';
 
-const _alpha = 0.15;
+const _alpha = 0.08;
 
 class RatioMatchNotifier extends Notifier<RatioMatch?> {
   double _smoothedCents = 0;

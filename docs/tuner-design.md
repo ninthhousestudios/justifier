@@ -33,3 +33,22 @@ changed elsewhere im thinking. but still the app always only has one signle glob
 defaults:
 the tuner will ship with defaults
 basically, 5-limit, meaning the 12 ratios that are easiest and standard 5-limit ones
+
+# ways of smoothing tune
+
+Current state: The green zone is effectively 0–5 cents, the IIR smoothing has α=0.15 (~220ms time constant), and there's no hysteresis on the
+  color transitions. For a bowed string with natural pitch wobble, 5 cents is genuinely tight — professional vibrato alone is ±10-30 cents.
+
+  Here are the levers we could pull, roughly from simplest to most involved:
+
+  1. Widen the green zone — Move the green→amber crossover from ~5¢ to 8–10¢. Trivial change (_deviationScale and the 0.17 breakpoint in
+  _color()). Downside: less precise feedback for someone who actually wants to nail sub-5¢.
+  2. More aggressive smoothing — Drop α from 0.15 to ~0.06 (time constant ~550ms). Averages out natural bow wobble. Downside: sluggish response
+  to intentional pitch changes.
+  3. Hysteresis on color state — Once green, stay green until deviation exceeds a wider threshold (say 8¢), but require ≤5¢ to enter green.
+  Prevents the flickering at the boundary without widening the zone for initial lock-on. Moderate complexity.
+  4. Adaptive smoothing — Use heavy smoothing when pitch is stable (sustaining a note), light smoothing when it's changing fast (adjusting). Best
+   of both worlds but more moving parts.
+  5. Median filter stage — Add a small sliding-window median (5–7 samples) before the IIR. Excellent at rejecting harmonic-jump outliers. Can
+  combine with any of the above.
+  6. User-configurable tolerance — Put a sensitivity slider in the tuner settings drawer. Let the player choose how strict it is.

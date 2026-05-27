@@ -10,10 +10,12 @@ class TunerIndicator extends StatefulWidget {
     super.key,
     this.deviationCents,
     this.isActive = false,
+    this.toleranceCents = 5.0,
   });
 
   final double? deviationCents;
   final bool isActive;
+  final double toleranceCents;
 
   @override
   State<TunerIndicator> createState() => _TunerIndicatorState();
@@ -30,6 +32,7 @@ class _TunerIndicatorState extends State<TunerIndicator>
   double _beatMax = 1.0;
   double _amplitude = 0;
   double _deviationFactor = 0;
+  bool _lockedGreen = false;
 
   @override
   void initState() {
@@ -53,14 +56,27 @@ class _TunerIndicatorState extends State<TunerIndicator>
 
     final hasSignal = widget.isActive && widget.deviationCents != null;
     final absCents = widget.deviationCents?.abs() ?? 0.0;
+    final tolerance = widget.toleranceCents;
 
-    final tBeatFreq = hasSignal ? 6.0 * (1.0 - exp(-absCents / 25.0)) : 0.0;
+    if (!hasSignal) {
+      _lockedGreen = false;
+    } else if (_lockedGreen) {
+      if (absCents > tolerance + 3.0) _lockedGreen = false;
+    } else {
+      if (absCents <= tolerance) _lockedGreen = true;
+    }
+
+    final excessCents =
+        _lockedGreen ? 0.0 : (absCents - tolerance).clamp(0.0, 25.0);
+
+    final tBeatFreq =
+        hasSignal ? 6.0 * (1.0 - exp(-excessCents / 25.0)) : 0.0;
     final tBeatMin =
-        hasSignal ? 1.0 - 0.8 * (1.0 - exp(-absCents / 15.0)) : 1.0;
+        hasSignal ? 1.0 - 0.8 * (1.0 - exp(-excessCents / 15.0)) : 1.0;
     final tBeatMax =
-        hasSignal ? 1.0 + 0.25 * (1.0 - exp(-absCents / 25.0)) : 1.0;
+        hasSignal ? 1.0 + 0.25 * (1.0 - exp(-excessCents / 25.0)) : 1.0;
     final tAmplitude = hasSignal ? 1.0 : 0.0;
-    final tDeviation = hasSignal ? (absCents / 30.0).clamp(0.0, 1.0) : 0.0;
+    final tDeviation = hasSignal ? excessCents / 25.0 : 0.0;
 
     final s = 1.0 - exp(-dt * 5.0);
     _beatFreq += (tBeatFreq - _beatFreq) * s;

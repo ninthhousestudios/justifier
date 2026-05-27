@@ -59,6 +59,8 @@ class TunerScreen extends ConsumerWidget {
                                     child: TunerIndicator(
                                       deviationCents: match?.deviationCents,
                                       isActive: hasMatch,
+                                      toleranceCents:
+                                          settings.toleranceCents,
                                     ),
                                   ),
                                 ),

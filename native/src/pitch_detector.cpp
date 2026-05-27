@@ -267,6 +267,7 @@ JUSTIFIER_EXPORT int justifier_pitch_start(void) {
     }
 
     g_pitch.sample_rate = (int)g_pitch.capture_device.sampleRate;
+    fprintf(stderr, "justifier_pitch: capture SR=%d\n", g_pitch.sample_rate);
 
     if (ma_device_start(&g_pitch.capture_device) != MA_SUCCESS) {
         fprintf(stderr, "justifier_pitch_start: capture device start failed\n");

@@ -11,6 +11,7 @@ class TunerSettings {
     this.showHz = false,
     this.selectedRatios = preset5Limit,
     this.customRatios = const [],
+    this.toleranceCents = 5.0,
   });
 
   final bool octaveReduction;
@@ -18,6 +19,7 @@ class TunerSettings {
   final bool showHz;
   final List<JiRatio> selectedRatios;
   final List<JiRatio> customRatios;
+  final double toleranceCents;
 
   bool isSelected(JiRatio r) => selectedRatios.contains(r);
   bool isCustom(JiRatio r) => customRatios.contains(r);
@@ -31,6 +33,7 @@ class TunerSettings {
     bool? showHz,
     List<JiRatio>? selectedRatios,
     List<JiRatio>? customRatios,
+    double? toleranceCents,
   }) {
     return TunerSettings(
       octaveReduction: octaveReduction ?? this.octaveReduction,
@@ -38,6 +41,7 @@ class TunerSettings {
       showHz: showHz ?? this.showHz,
       selectedRatios: selectedRatios ?? this.selectedRatios,
       customRatios: customRatios ?? this.customRatios,
+      toleranceCents: toleranceCents ?? this.toleranceCents,
     );
   }
 }
@@ -48,6 +52,7 @@ class TunerSettingsNotifier extends Notifier<TunerSettings> {
   static const _keyShowHz = 'tuner.showHz';
   static const _keySelected = 'tuner.selectedRatios';
   static const _keyCustom = 'tuner.customRatios';
+  static const _keyTolerance = 'tuner.toleranceCents';
 
   SharedPreferences get _prefs => ref.read(sharedPrefsProvider);
 
@@ -69,12 +74,15 @@ class TunerSettingsNotifier extends Notifier<TunerSettings> {
     final customRatios =
         customKeys?.map(parseRatio).whereType<JiRatio>().toList() ?? [];
 
+    final toleranceCents = _prefs.getDouble(_keyTolerance) ?? 5.0;
+
     return TunerSettings(
       octaveReduction: octaveReduction,
       showCents: showCents,
       showHz: showHz,
       selectedRatios: selectedRatios,
       customRatios: customRatios,
+      toleranceCents: toleranceCents,
     );
   }
 
@@ -90,6 +98,7 @@ class TunerSettingsNotifier extends Notifier<TunerSettings> {
       _keyCustom,
       state.customRatios.map(serializeRatio).toList(),
     );
+    _prefs.setDouble(_keyTolerance, state.toleranceCents);
   }
 
   void setOctaveReduction(bool v) {
@@ -104,6 +113,11 @@ class TunerSettingsNotifier extends Notifier<TunerSettings> {
 
   void setShowHz(bool v) {
     state = state.copyWith(showHz: v);
+    _save();
+  }
+
+  void setToleranceCents(double v) {
+    state = state.copyWith(toleranceCents: v.clamp(2.0, 15.0));
     _save();
   }
 

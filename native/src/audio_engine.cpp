@@ -618,8 +618,34 @@ int justifier_init(int sample_rate, int buffer_size) {
         g_engine.voices[i].dsp_pending = NULL;
     }
 
-    if (faust_wrapper_init(sample_rate) != 0) {
+    g_engine.control_queue =
+        new moodycamel::ReaderWriterQueue<ControlMessage>(1024);
+
+    // Init the device before Faust so we know the actual negotiated sample rate.
+    // ma_device_init does not start audio — ma_device_start does.
+    ma_device_config config      = ma_device_config_init(ma_device_type_playback);
+    config.playback.format       = ma_format_f32;
+    config.playback.channels     = 2;
+    config.sampleRate            = (ma_uint32)sample_rate;
+    config.periodSizeInFrames    = (ma_uint32)buffer_size;
+    config.dataCallback          = audio_callback;
+    config.pUserData             = &g_engine;
+
+    if (ma_device_init(NULL, &config, &g_engine.device) != MA_SUCCESS) {
+        fprintf(stderr, "justifier_init: ma_device_init failed\n");
+        delete g_engine.control_queue;
+        return -2;
+    }
+
+    int actual_rate = (int)g_engine.device.sampleRate;
+    g_engine.sample_rate = actual_rate;
+    fprintf(stderr, "justifier_init: requested SR=%d, device SR=%d\n",
+            sample_rate, actual_rate);
+
+    if (faust_wrapper_init(actual_rate) != 0) {
         fprintf(stderr, "justifier_init: faust_wrapper_init failed\n");
+        ma_device_uninit(&g_engine.device);
+        delete g_engine.control_queue;
         return -1;
     }
 
@@ -637,24 +663,6 @@ int justifier_init(int sample_rate, int buffer_size) {
     g_engine.eq_return_level = 0.3f;
     g_engine.saturation_dsp = faust_wrapper_saturation_acquire();
     g_engine.saturation_return_level = 0.3f;
-
-    g_engine.control_queue =
-        new moodycamel::ReaderWriterQueue<ControlMessage>(1024);
-
-    ma_device_config config      = ma_device_config_init(ma_device_type_playback);
-    config.playback.format       = ma_format_f32;
-    config.playback.channels     = 2;
-    config.sampleRate            = (ma_uint32)sample_rate;
-    config.periodSizeInFrames    = (ma_uint32)buffer_size;
-    config.dataCallback          = audio_callback;
-    config.pUserData             = &g_engine;
-
-    if (ma_device_init(NULL, &config, &g_engine.device) != MA_SUCCESS) {
-        fprintf(stderr, "justifier_init: ma_device_init failed\n");
-        faust_wrapper_shutdown();
-        delete g_engine.control_queue;
-        return -2;
-    }
 
     if (ma_device_start(&g_engine.device) != MA_SUCCESS) {
         fprintf(stderr, "justifier_init: ma_device_start failed\n");
