@@ -600,11 +600,16 @@ static void audio_callback(ma_device* device, void* output,
 extern "C" {
 
 int justifier_init(int sample_rate, int buffer_size) {
+    if (g_engine.running.load()) {
+        justifier_shutdown();
+    }
+
     memset(&g_engine, 0, sizeof(g_engine));
+    g_engine.is_silent.store(true, std::memory_order_seq_cst);
+    g_engine.running.store(false);
     g_engine.sample_rate   = sample_rate;
     g_engine.buffer_size   = buffer_size;
     g_engine.master_volume = 1.0f;
-    g_engine.is_silent.store(false);
     g_engine.active_voice_count.store(0);
 
     for (int i = 0; i < MAX_VOICES; i++) {
@@ -659,14 +664,18 @@ int justifier_init(int sample_rate, int buffer_size) {
         return -3;
     }
 
-    g_engine.running = true;
+    g_engine.running.store(true);
+    g_engine.is_silent.store(false, std::memory_order_seq_cst);
     return 0;
 }
 
 void justifier_shutdown(void) {
-    if (!g_engine.running) return;
+    if (!g_engine.running.load()) return;
 
-    ma_device_uninit(&g_engine.device);  // stops callback first
+    g_engine.is_silent.store(true, std::memory_order_seq_cst);
+    g_engine.running.store(false);
+
+    ma_device_uninit(&g_engine.device);
 
     for (int i = 0; i < MAX_VOICES; i++) {
         if (g_engine.voices[i].dsp) {
@@ -697,7 +706,6 @@ void justifier_shutdown(void) {
     faust_wrapper_shutdown();
     delete g_engine.control_queue;
     g_engine.control_queue = NULL;
-    g_engine.running = false;
 }
 
 int justifier_voice_add(WaveformType type, float frequency, float amplitude) {

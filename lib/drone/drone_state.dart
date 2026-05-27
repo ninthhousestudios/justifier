@@ -14,6 +14,7 @@ class DroneVoice {
     this.useRatio = true,
     this.numerator = 1,
     this.denominator = 1,
+    this.approximateRatio = false,
   });
 
   final int id;
@@ -23,6 +24,7 @@ class DroneVoice {
   final bool useRatio;
   final int numerator;
   final int denominator;
+  final bool approximateRatio;
 
   DroneVoice copyWith({
     double? frequency,
@@ -31,6 +33,7 @@ class DroneVoice {
     bool? useRatio,
     int? numerator,
     int? denominator,
+    bool? approximateRatio,
   }) {
     return DroneVoice(
       id: id,
@@ -40,6 +43,7 @@ class DroneVoice {
       useRatio: useRatio ?? this.useRatio,
       numerator: numerator ?? this.numerator,
       denominator: denominator ?? this.denominator,
+      approximateRatio: approximateRatio ?? this.approximateRatio,
     );
   }
 
@@ -53,7 +57,8 @@ class DroneVoice {
     return '${hz.toStringAsFixed(1)} Hz';
   }
 
-  String get ratioLabel => '$numerator/$denominator';
+  String get ratioLabel =>
+      '${approximateRatio ? '≈ ' : ''}$numerator/$denominator';
 }
 
 class DroneNotifier extends Notifier<List<DroneVoice>> {
@@ -124,19 +129,63 @@ class DroneNotifier extends Notifier<List<DroneVoice>> {
   void setRatioMode(int id, bool useRatio) {
     final voice = state.firstWhere((v) => v.id == id);
     if (voice.useRatio == useRatio) return;
-    final updated = voice.copyWith(useRatio: useRatio);
+    final refHz = _refHz;
+    DroneVoice updated;
     if (useRatio) {
-      _engine.setFrequency(id, updated.ratioHz(_refHz));
+      final ratio = voice.frequency / refHz;
+      final (n, d) = _approximateRatio(ratio);
+      final isApprox = (ratio - n / d).abs() > 1e-9;
+      updated = voice.copyWith(
+        useRatio: true,
+        numerator: n,
+        denominator: d,
+        approximateRatio: isApprox,
+      );
+      _engine.setFrequency(id, updated.ratioHz(refHz));
+    } else {
+      updated = voice.copyWith(
+        useRatio: false,
+        frequency: voice.ratioHz(refHz),
+      );
     }
     state = [
       for (final v in state) if (v.id == id) updated else v,
     ];
   }
 
+  static (int, int) _approximateRatio(double value, {int maxDenom = 128}) {
+    if (value <= 0) return (1, 1);
+    int bestN = 1, bestD = 1;
+    double bestErr = (value - 1).abs();
+    int prevN = 0, prevD = 1, currN = 1, currD = 0;
+    double x = value;
+    for (int i = 0; i < 20; i++) {
+      final a = x.floor();
+      final n = a * currN + prevN;
+      final d = a * currD + prevD;
+      if (d > maxDenom) break;
+      final err = (value - n / d).abs();
+      if (err < bestErr) {
+        bestN = n;
+        bestD = d;
+        bestErr = err;
+        if (err < 1e-9) break;
+      }
+      prevN = currN;
+      prevD = currD;
+      currN = n;
+      currD = d;
+      final remainder = x - a;
+      if (remainder < 1e-9) break;
+      x = 1.0 / remainder;
+    }
+    return (bestN.clamp(1, 9999), bestD.clamp(1, 9999));
+  }
+
   void setNumerator(int id, int n) {
     if (n < 1) return;
     final voice = state.firstWhere((v) => v.id == id);
-    final updated = voice.copyWith(numerator: n);
+    final updated = voice.copyWith(numerator: n, approximateRatio: false);
     _engine.setFrequency(id, updated.ratioHz(_refHz));
     state = [
       for (final v in state) if (v.id == id) updated else v,
@@ -146,7 +195,7 @@ class DroneNotifier extends Notifier<List<DroneVoice>> {
   void setDenominator(int id, int d) {
     if (d < 1) return;
     final voice = state.firstWhere((v) => v.id == id);
-    final updated = voice.copyWith(denominator: d);
+    final updated = voice.copyWith(denominator: d, approximateRatio: false);
     _engine.setFrequency(id, updated.ratioHz(_refHz));
     state = [
       for (final v in state) if (v.id == id) updated else v,

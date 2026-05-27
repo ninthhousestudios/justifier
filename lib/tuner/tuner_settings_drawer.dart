@@ -33,24 +33,29 @@ class _TunerSettingsDrawerState extends ConsumerState<TunerSettingsDrawer> {
             if (!_open) _advanced = false;
           }),
         ),
-        if (_open) ...[
-          _Toggles(settings: settings, notifier: notifier),
-          _Presets(settings: settings, notifier: notifier),
-          const SizedBox(height: 8),
-          _AdvancedHandle(
-            open: _advanced,
-            onTap: () => setState(() => _advanced = !_advanced),
-          ),
-          if (_advanced)
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 340),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child:
-                    _AdvancedRatios(settings: settings, notifier: notifier),
+        if (_open)
+          Flexible(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _Toggles(settings: settings, notifier: notifier),
+                  _Presets(settings: settings, notifier: notifier),
+                  const SizedBox(height: 8),
+                  _AdvancedHandle(
+                    open: _advanced,
+                    onTap: () => setState(() => _advanced = !_advanced),
+                  ),
+                  if (_advanced)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: _AdvancedRatios(
+                          settings: settings, notifier: notifier),
+                    ),
+                ],
               ),
             ),
-        ],
+          ),
         Divider(height: 1, color: theme.colorScheme.surfaceContainerHighest),
       ],
     );
@@ -161,7 +166,10 @@ class _Presets extends StatelessWidget {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Row(
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Text(
             'Presets',
@@ -169,11 +177,9 @@ class _Presets extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 6),
           _presetChip(context, '3', preset3Limit),
-          const SizedBox(width: 6),
           _presetChip(context, '5', preset5Limit),
-          const SizedBox(width: 6),
           _presetChip(context, '7', preset7Limit),
         ],
       ),
@@ -276,6 +282,7 @@ class _AdvancedRatios extends StatelessWidget {
               ratios: groups[limit]!,
               settings: settings,
               notifier: notifier,
+              showGroupToggle: true,
             ),
         if (settings.customRatios.isNotEmpty)
           _RatioGroup(
@@ -299,6 +306,7 @@ class _RatioGroup extends StatelessWidget {
     required this.settings,
     required this.notifier,
     this.showDelete = false,
+    this.showGroupToggle = false,
   });
 
   final String label;
@@ -306,19 +314,48 @@ class _RatioGroup extends StatelessWidget {
   final TunerSettings settings;
   final TunerSettingsNotifier notifier;
   final bool showDelete;
+  final bool showGroupToggle;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final allSelected = ratios.every(settings.isSelected);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 8),
-        Text(
-          label,
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
+        Row(
+          children: [
+            Text(
+              label,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            if (showGroupToggle) ...[
+              const SizedBox(width: 4),
+              SizedBox(
+                height: 20,
+                width: 20,
+                child: Checkbox(
+                  value: allSelected
+                      ? true
+                      : ratios.any(settings.isSelected)
+                          ? null
+                          : false,
+                  tristate: true,
+                  onChanged: (_) =>
+                      notifier.setGroupSelected(ratios, !allSelected),
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  side: BorderSide(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    width: 1.5,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
         const SizedBox(height: 4),
         Wrap(
@@ -358,11 +395,24 @@ class _RatioChip extends StatelessWidget {
     return GestureDetector(
       onLongPress: onDelete,
       child: FilterChip(
-        label: Text(ratio.label, style: const TextStyle(fontSize: 11)),
+        label: Text(
+          ratio.label,
+          style: TextStyle(
+            fontSize: 11,
+            color: selected
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
         tooltip: ratio.name,
         selected: selected,
-        selectedColor: theme.colorScheme.primary.withAlpha(40),
+        selectedColor: theme.colorScheme.surface,
         checkmarkColor: theme.colorScheme.primary,
+        side: BorderSide(
+          color: selected
+              ? theme.colorScheme.primary
+              : theme.colorScheme.surfaceContainerHighest,
+        ),
         onSelected: (_) => onToggle(),
         visualDensity: VisualDensity.compact,
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,

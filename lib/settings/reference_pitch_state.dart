@@ -1,4 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'prefs_provider.dart';
 
 class ReferencePitch {
   const ReferencePitch({this.hz = 440.0, this.noteName = 'A4'});
@@ -26,17 +29,37 @@ const noteFrequencies = {
 };
 
 class ReferencePitchNotifier extends Notifier<ReferencePitch> {
+  static const _keyHz = 'reference.hz';
+  static const _keyNoteName = 'reference.noteName';
+
+  SharedPreferences get _prefs => ref.read(sharedPrefsProvider);
+
   @override
-  ReferencePitch build() => const ReferencePitch();
+  ReferencePitch build() {
+    final hz = _prefs.getDouble(_keyHz) ?? 440.0;
+    final noteName = _prefs.getString(_keyNoteName) ?? 'A4';
+    return ReferencePitch(hz: hz, noteName: noteName);
+  }
+
+  void _save() {
+    _prefs.setDouble(_keyHz, state.hz);
+    if (state.noteName != null) {
+      _prefs.setString(_keyNoteName, state.noteName!);
+    } else {
+      _prefs.remove(_keyNoteName);
+    }
+  }
 
   void setHz(double hz) {
     state = ReferencePitch(hz: hz, noteName: null);
+    _save();
   }
 
   void setFromNoteName(String name) {
     final hz = noteFrequencies[name];
     if (hz != null) {
       state = ReferencePitch(hz: hz, noteName: name);
+      _save();
     }
   }
 }

@@ -22,7 +22,7 @@ class TunerScreen extends ConsumerWidget {
     return SafeArea(
       child: Column(
         children: [
-          const TunerSettingsDrawer(),
+          const Flexible(child: TunerSettingsDrawer()),
           if (pitch.permissionDenied)
             const Expanded(child: _PermissionDenied()),
           if (!pitch.permissionDenied) ...[

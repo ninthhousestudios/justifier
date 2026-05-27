@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'settings/prefs_provider.dart';
+import 'settings/ui_scale_state.dart';
 import 'theme/app_theme.dart';
 import 'screens/explore_screen.dart';
 import 'screens/tuner_screen.dart';
@@ -23,16 +24,24 @@ void main() async {
   ));
 }
 
-class JustifierApp extends StatelessWidget {
+class JustifierApp extends ConsumerWidget {
   const JustifierApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scale = ref.watch(uiScaleProvider);
     return MaterialApp(
       title: 'Justifier',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.justifier(),
       home: const AppShell(),
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+        return MediaQuery(
+          data: mq.copyWith(textScaler: TextScaler.linear(scale)),
+          child: child!,
+        );
+      },
     );
   }
 }

@@ -114,6 +114,19 @@ class TunerSettingsNotifier extends Notifier<TunerSettings> {
     _save();
   }
 
+  void setGroupSelected(List<JiRatio> ratios, bool select) {
+    final selected = List.of(state.selectedRatios);
+    if (select) {
+      for (final r in ratios) {
+        if (!selected.contains(r)) selected.add(r);
+      }
+    } else {
+      selected.removeWhere(ratios.contains);
+    }
+    state = state.copyWith(selectedRatios: selected);
+    _save();
+  }
+
   void toggleRatio(JiRatio ratio) {
     final selected = List.of(state.selectedRatios);
     if (selected.contains(ratio)) {
