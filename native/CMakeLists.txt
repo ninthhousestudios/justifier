@@ -78,6 +78,7 @@ endif()
 # Library target
 # ---------------------------------------------------------------------------
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    enable_language(OBJC)
     enable_language(OBJCXX)
     # miniaudio implementation includes <AVFoundation/AVFoundation.h> on iOS,
     # which is Objective-C — compile as Objective-C++ so clang understands it.
