@@ -44,6 +44,7 @@ typedef struct {
     float           decay_time;     // seconds (default 0.3)
     float           sustain_level;  // 0.0 to 1.0 (default 0.8)
     int             release_samples_remaining; // countdown for VOICE_RELEASING timeout
+    int             release_samples_total;     // initial value for linear fade
     float           filter_type;      // 0=LP, 1=HP, 2=BP, 3=notch
     float           filter_cutoff;    // Hz, 20..20000 (default 20000)
     float           filter_resonance; // 0.0..1.0 (default 0.0)

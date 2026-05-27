@@ -126,9 +126,10 @@ static void apply_control_message(AudioEngine* eng, const ControlMessage* msg) {
             }
 
             faust_wrapper_set_param(slot->dsp, "gate", 0.0f);
-            // Timeout = release_time + 0.5s safety margin
-            slot->release_samples_remaining =
-                (int)((slot->release_time + 0.5f) * (float)eng->sample_rate);
+            int fade = (int)(0.005f * (float)eng->sample_rate);
+            if (fade < 1) fade = 1;
+            slot->release_samples_remaining = fade;
+            slot->release_samples_total     = fade;
             slot->state.store(VOICE_RELEASING);
             break;
         }
@@ -487,26 +488,35 @@ static void audio_callback(ma_device* device, void* output,
                 slot->state.store(VOICE_ACTIVE);
             }
         } else if (state == VOICE_RELEASING) {
-            // Voice is in release phase — keep rendering until timeout
             faust_wrapper_compute(slot->dsp, (int)frame_count, tmp);
 
             float amp_L = slot->amplitude * (1.0f - slot->pan) * 0.5f;
             float amp_R = slot->amplitude * (1.0f + slot->pan) * 0.5f;
+            int remaining = slot->release_samples_remaining;
+            int total     = slot->release_samples_total;
 
             for (ma_uint32 s = 0; s < frame_count; s++) {
-                out[s * 2]     += tmp[s] * amp_L * eng->master_volume;
-                out[s * 2 + 1] += tmp[s] * amp_R * eng->master_volume;
+                float fade = (remaining > 0)
+                    ? (float)remaining / (float)total
+                    : 0.0f;
+                if (remaining > 0) remaining--;
+                out[s * 2]     += tmp[s] * amp_L * fade * eng->master_volume;
+                out[s * 2 + 1] += tmp[s] * amp_R * fade * eng->master_volume;
             }
 
-            // Accumulate effect sends for releasing voice
+            // Accumulate effect sends with the same fade applied
+            remaining = slot->release_samples_remaining;
             #define ACCUM_SEND_BLOCK(field, bus_L, bus_R, active_flag) \
                 if (slot->field > 0.0f) { \
                     active_flag = true; \
                     float sL = slot->field * (1.0f - slot->pan) * 0.5f; \
                     float sR = slot->field * (1.0f + slot->pan) * 0.5f; \
+                    int rem2 = remaining; \
                     for (ma_uint32 s = 0; s < frame_count; s++) { \
-                        bus_L[s] += tmp[s] * sL; \
-                        bus_R[s] += tmp[s] * sR; \
+                        float f = (rem2 > 0) ? (float)rem2 / (float)total : 0.0f; \
+                        if (rem2 > 0) rem2--; \
+                        bus_L[s] += tmp[s] * sL * f; \
+                        bus_R[s] += tmp[s] * sR * f; \
                     } \
                 }
             ACCUM_SEND_BLOCK(reverb_send,     send_reverb_L,  send_reverb_R,  send_reverb_active)
