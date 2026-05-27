@@ -5,6 +5,8 @@ import '../tuner/pitch_state.dart';
 import '../tuner/ratio.dart';
 import '../tuner/ratio_match_provider.dart';
 import '../tuner/tuner_indicator.dart';
+import '../tuner/tuner_settings_drawer.dart';
+import '../tuner/tuner_settings_state.dart';
 
 class TunerScreen extends ConsumerWidget {
   const TunerScreen({super.key});
@@ -14,12 +16,13 @@ class TunerScreen extends ConsumerWidget {
     final pitch = ref.watch(pitchProvider);
     final notifier = ref.read(pitchProvider.notifier);
     final match = ref.watch(ratioMatchProvider);
+    final settings = ref.watch(tunerSettingsProvider);
     final hasMatch = pitch.isRunning && match != null;
 
     return SafeArea(
       child: Column(
         children: [
-          const _SettingsDrawer(),
+          const TunerSettingsDrawer(),
           if (pitch.permissionDenied)
             const Expanded(child: _PermissionDenied()),
           if (!pitch.permissionDenied) ...[
@@ -39,6 +42,13 @@ class TunerScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            if (hasMatch)
+              _OptionalReadouts(
+                match: match,
+                pitch: pitch,
+                showCents: settings.showCents,
+                showHz: settings.showHz,
+              ),
             const Spacer(flex: 3),
           ],
           Padding(
@@ -108,6 +118,49 @@ class _RatioDisplay extends StatelessWidget {
   }
 }
 
+class _OptionalReadouts extends StatelessWidget {
+  const _OptionalReadouts({
+    required this.match,
+    required this.pitch,
+    required this.showCents,
+    required this.showHz,
+  });
+
+  final RatioMatch match;
+  final PitchState pitch;
+  final bool showCents;
+  final bool showHz;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!showCents && !showHz) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    final style = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (showCents) ...[
+            Text(_formatCents(match.deviationCents), style: style),
+            if (showHz) const SizedBox(width: 16),
+          ],
+          if (showHz) Text('${pitch.hz.toStringAsFixed(1)} Hz', style: style),
+        ],
+      ),
+    );
+  }
+
+  static String _formatCents(double cents) {
+    final sign = cents >= 0 ? '+' : '−';
+    return '$sign${cents.abs().toStringAsFixed(1)}¢';
+  }
+}
+
 class _PermissionDenied extends StatelessWidget {
   const _PermissionDenied();
 
@@ -135,69 +188,6 @@ class _PermissionDenied extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _SettingsDrawer extends StatefulWidget {
-  const _SettingsDrawer();
-
-  @override
-  State<_SettingsDrawer> createState() => _SettingsDrawerState();
-}
-
-class _SettingsDrawerState extends State<_SettingsDrawer> {
-  bool _open = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        InkWell(
-          onTap: () => setState(() => _open = !_open),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Settings',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Icon(
-                  _open ? Icons.expand_less : Icons.expand_more,
-                  size: 18,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ],
-            ),
-          ),
-        ),
-        AnimatedCrossFade(
-          duration: const Duration(milliseconds: 200),
-          crossFadeState:
-              _open ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-          firstChild: const SizedBox(height: 0, width: double.infinity),
-          secondChild: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Text(
-              'Tuner settings will go here',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
-        Divider(height: 1, color: theme.colorScheme.surfaceContainerHighest),
-      ],
     );
   }
 }

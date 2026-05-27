@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'settings/prefs_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/explore_screen.dart';
 import 'screens/tuner_screen.dart';
@@ -13,7 +15,12 @@ void main() async {
 
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
-  runApp(const ProviderScope(child: JustifierApp()));
+  final prefs = await SharedPreferences.getInstance();
+
+  runApp(ProviderScope(
+    overrides: [sharedPrefsProvider.overrideWithValue(prefs)],
+    child: const JustifierApp(),
+  ));
 }
 
 class JustifierApp extends StatelessWidget {
