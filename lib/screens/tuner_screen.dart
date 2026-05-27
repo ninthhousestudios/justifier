@@ -20,52 +20,86 @@ class TunerScreen extends ConsumerWidget {
     final hasMatch = pitch.isRunning && match != null;
 
     return SafeArea(
-      child: Column(
-        children: [
-          const Flexible(child: TunerSettingsDrawer()),
-          if (pitch.permissionDenied)
-            const Expanded(child: _PermissionDenied()),
-          if (!pitch.permissionDenied) ...[
-            const Spacer(flex: 2),
-            _RatioDisplay(
-              match: hasMatch ? match : null,
-              isListening: pitch.isRunning && !hasMatch,
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              height: 200,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: TunerIndicator(
-                  deviationCents: match?.deviationCents,
-                  isActive: hasMatch,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Column(
+            children: [
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: constraints.maxHeight * 0.55,
                 ),
+                child: const TunerSettingsDrawer(),
               ),
-            ),
-            if (hasMatch)
-              _OptionalReadouts(
-                match: match,
-                pitch: pitch,
-                showCents: settings.showCents,
-                showHz: settings.showHz,
-              ),
-            const Spacer(flex: 3),
-          ],
-          Padding(
-            padding: const EdgeInsets.only(bottom: 32),
-            child: FilledButton.icon(
-              onPressed: () {
-                if (pitch.isRunning) {
-                  notifier.stop();
-                } else {
-                  notifier.start();
-                }
-              },
-              icon: Icon(pitch.isRunning ? Icons.stop : Icons.mic),
-              label: Text(pitch.isRunning ? 'Stop' : 'Start'),
-            ),
-          ),
-        ],
+              if (pitch.permissionDenied)
+                const Expanded(child: _PermissionDenied()),
+              if (!pitch.permissionDenied)
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, contentConstraints) {
+                      return SingleChildScrollView(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: contentConstraints.maxHeight,
+                          ),
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _RatioDisplay(
+                                  match: hasMatch ? match : null,
+                                  isListening:
+                                      pitch.isRunning && !hasMatch,
+                                ),
+                                const SizedBox(height: 24),
+                                SizedBox(
+                                  height: 200,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 24),
+                                    child: TunerIndicator(
+                                      deviationCents: match?.deviationCents,
+                                      isActive: hasMatch,
+                                    ),
+                                  ),
+                                ),
+                                if (hasMatch)
+                                  _OptionalReadouts(
+                                    match: match,
+                                    pitch: pitch,
+                                    showCents: settings.showCents,
+                                    showHz: settings.showHz,
+                                  ),
+                                const SizedBox(height: 32),
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.only(bottom: 32),
+                                  child: FilledButton.icon(
+                                    onPressed: () {
+                                      if (pitch.isRunning) {
+                                        notifier.stop();
+                                      } else {
+                                        notifier.start();
+                                      }
+                                    },
+                                    icon: Icon(pitch.isRunning
+                                        ? Icons.stop
+                                        : Icons.mic),
+                                    label: Text(pitch.isRunning
+                                        ? 'Stop'
+                                        : 'Start'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
