@@ -15,6 +15,7 @@ migrate_working_dir/
 justifier-macos-error.md
 release/
 .sutra/
+opencode.json
 
 # IntelliJ related
 *.iml
