@@ -4,6 +4,8 @@ import AVFoundation
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
+  private var micChannel: FlutterMethodChannel?
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -12,17 +14,16 @@ import AVFoundation
     try? session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
     try? session.setActive(true)
 
-    if let controller = window?.rootViewController as? FlutterViewController {
-      let channel = FlutterMethodChannel(
-        name: "studio.ninthhouse.justifier/mic",
-        binaryMessenger: controller.binaryMessenger
-      )
-      channel.setMethodCallHandler { [weak self] call, result in
-        if call.method == "request" {
-          self?.requestMic(result: result)
-        } else {
-          result(FlutterMethodNotImplemented)
-        }
+    let registrar = self.registrar(forPlugin: "MicPermissionPlugin")!
+    micChannel = FlutterMethodChannel(
+      name: "studio.ninthhouse.justifier/mic",
+      binaryMessenger: registrar.messenger()
+    )
+    micChannel?.setMethodCallHandler { [weak self] call, result in
+      if call.method == "request" {
+        self?.requestMic(result: result)
+      } else {
+        result(FlutterMethodNotImplemented)
       }
     }
 
