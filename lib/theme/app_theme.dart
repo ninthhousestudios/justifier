@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'tuner_colors.dart';
+
 class AppTheme {
   static const _amberGold = Color(0xFFD4A017);
   static const _violet = Color(0xFF8B5CF6);
@@ -42,6 +44,14 @@ class AppTheme {
           return const TextStyle(color: _onSurfaceDim, fontSize: 12);
         }),
       ),
+      extensions: const [
+        TunerColors(
+          inTune: Color(0xFF22C55E),
+          close: Color(0xFFFBBF24),
+          off: Color(0xFFEF4444),
+          guideLine: Color(0xFF2A2A2A),
+        ),
+      ],
       fontFamily: 'Source Code Pro',
       appBarTheme: const AppBarTheme(
         backgroundColor: _black,

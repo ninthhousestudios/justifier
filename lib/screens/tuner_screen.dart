@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../tuner/pitch_state.dart';
+import '../tuner/ratio.dart';
 import '../tuner/ratio_match_provider.dart';
+import '../tuner/tuner_indicator.dart';
 
 class TunerScreen extends ConsumerWidget {
   const TunerScreen({super.key});
@@ -12,81 +14,33 @@ class TunerScreen extends ConsumerWidget {
     final pitch = ref.watch(pitchProvider);
     final notifier = ref.read(pitchProvider.notifier);
     final match = ref.watch(ratioMatchProvider);
-    final theme = Theme.of(context);
+    final hasMatch = pitch.isRunning && match != null;
 
     return SafeArea(
       child: Column(
         children: [
-          const Spacer(),
-          if (pitch.permissionDenied) ...[
-            Icon(Icons.mic_off, size: 64, color: theme.colorScheme.error),
-            const SizedBox(height: 16),
-            Text(
-              'Microphone access denied',
-              style: theme.textTheme.headlineMedium?.copyWith(
-                color: theme.colorScheme.error,
-              ),
+          const _SettingsDrawer(),
+          if (pitch.permissionDenied)
+            const Expanded(child: _PermissionDenied()),
+          if (!pitch.permissionDenied) ...[
+            const Spacer(flex: 2),
+            _RatioDisplay(
+              match: hasMatch ? match : null,
+              isListening: pitch.isRunning && !hasMatch,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Enable in system settings to use the tuner',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ] else if (pitch.isRunning && match != null) ...[
-            Text(
-              match.ratio.label,
-              style: theme.textTheme.displayLarge?.copyWith(
-                color: theme.colorScheme.primary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            if (match.ratio.name != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  match.ratio.name!,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 200,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: TunerIndicator(
+                  deviationCents: match?.deviationCents,
+                  isActive: hasMatch,
                 ),
               ),
-            const SizedBox(height: 16),
-            _CentsDisplay(cents: match.deviationCents),
-            const SizedBox(height: 16),
-            Text(
-              '${pitch.hz.toStringAsFixed(1)} Hz',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
             ),
-            const SizedBox(height: 8),
-            _ConfidenceBar(confidence: pitch.confidence),
-          ] else if (pitch.isRunning) ...[
-            Icon(Icons.mic, size: 64, color: theme.colorScheme.onSurfaceVariant),
-            const SizedBox(height: 16),
-            Text(
-              'Listening...',
-              style: theme.textTheme.headlineMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ] else ...[
-            Icon(
-              Icons.mic_off,
-              size: 64,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Tap to start',
-              style: theme.textTheme.headlineMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
+            const Spacer(flex: 3),
           ],
-          const Spacer(),
           Padding(
             padding: const EdgeInsets.only(bottom: 32),
             child: FilledButton.icon(
@@ -107,55 +61,143 @@ class TunerScreen extends ConsumerWidget {
   }
 }
 
-class _CentsDisplay extends StatelessWidget {
-  const _CentsDisplay({required this.cents});
+class _RatioDisplay extends StatelessWidget {
+  const _RatioDisplay({
+    this.match,
+    this.isListening = false,
+  });
 
-  final double cents;
+  final RatioMatch? match;
+  final bool isListening;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final absCents = cents.abs();
-    final sign = cents >= 0 ? '+' : '−';
-    final color = absCents < 5
-        ? Colors.green
-        : absCents < 15
-            ? Colors.amber
-            : theme.colorScheme.error;
+
+    if (match != null) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            match!.ratio.label,
+            style: theme.textTheme.displayLarge?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          if (match!.ratio.name != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                match!.ratio.name!,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+        ],
+      );
+    }
 
     return Text(
-      '$sign${absCents.toStringAsFixed(1)}¢',
+      isListening ? 'Listening...' : 'Tap to start',
       style: theme.textTheme.headlineMedium?.copyWith(
-        color: color,
-        fontWeight: FontWeight.bold,
+        color: theme.colorScheme.onSurfaceVariant,
       ),
     );
   }
 }
 
-class _ConfidenceBar extends StatelessWidget {
-  const _ConfidenceBar({required this.confidence});
-
-  final double confidence;
+class _PermissionDenied extends StatelessWidget {
+  const _PermissionDenied();
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return SizedBox(
-      width: 200,
-      height: 8,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: LinearProgressIndicator(
-          value: confidence.clamp(0.0, 1.0),
-          backgroundColor: theme.colorScheme.surfaceContainerHighest,
-          color: confidence > 0.9
-              ? Colors.green
-              : confidence > 0.8
-                  ? Colors.amber
-                  : theme.colorScheme.primary,
-        ),
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.mic_off, size: 64, color: theme.colorScheme.error),
+          const SizedBox(height: 16),
+          Text(
+            'Microphone access denied',
+            style: theme.textTheme.headlineMedium?.copyWith(
+              color: theme.colorScheme.error,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Enable in system settings to use the tuner',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class _SettingsDrawer extends StatefulWidget {
+  const _SettingsDrawer();
+
+  @override
+  State<_SettingsDrawer> createState() => _SettingsDrawerState();
+}
+
+class _SettingsDrawerState extends State<_SettingsDrawer> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        InkWell(
+          onTap: () => setState(() => _open = !_open),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Settings',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  _open ? Icons.expand_less : Icons.expand_more,
+                  size: 18,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+        AnimatedCrossFade(
+          duration: const Duration(milliseconds: 200),
+          crossFadeState:
+              _open ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          firstChild: const SizedBox(height: 0, width: double.infinity),
+          secondChild: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Text(
+              'Tuner settings will go here',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+        Divider(height: 1, color: theme.colorScheme.surfaceContainerHighest),
+      ],
     );
   }
 }
