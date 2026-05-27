@@ -68,7 +68,7 @@ bottom navigation bar with four tabs:
 
 | tab | purpose |
 |-----|---------|
-| **home** | the lesson map — curriculum navigation, progress |
+| **explore** | the lesson map — curriculum navigation, progress |
 | **tuner** | standalone JI tuner — shows ratio relative to reference pitch |
 | **drone** | standalone drone player — pick a root, pick intervals, play |
 | **settings** | themes, progress, preferences, reference materials |
@@ -243,7 +243,6 @@ three themes available in settings:
 | theme | description |
 |-------|-------------|
 | **light** | conventional light mode for readability |
-| **dark** | conventional dark mode |
 | **justifier** | the signature aesthetic: black ground, amber-gold and violet accents applied as glow, cinzel display type. sacred/contemplative darkness. |
 
 the justifier theme is the default. users can switch in settings.
@@ -253,7 +252,7 @@ the justifier theme is the default. users can switch in settings.
 ### what v1 ships with
 
 - mobile app (android + ios)
-- bottom nav: home, tuner, drone, settings
+- bottom nav: explore, tuner, drone, settings
 - lesson map with curriculum through at least sections 1-5 (orientation through
   temperament)
 - embedded tuner and drone within lessons
