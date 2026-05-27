@@ -1,8 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:permission_handler/permission_handler.dart';
-
+import 'mic_permission.dart';
 import '../audio/audio_engine.dart';
 import '../audio/engine_provider.dart';
 
@@ -33,8 +32,8 @@ class PitchNotifier extends Notifier<PitchState> {
   Future<void> start() async {
     if (state.isRunning) return;
 
-    final status = await Permission.microphone.request();
-    if (!status.isGranted) {
+    final status = await MicPermission.request();
+    if (status != MicPermissionStatus.granted) {
       state = const PitchState(permissionDenied: true);
       return;
     }

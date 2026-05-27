@@ -12,7 +12,36 @@ import AVFoundation
     try? session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
     try? session.setActive(true)
 
+    if let controller = window?.rootViewController as? FlutterViewController {
+      let channel = FlutterMethodChannel(
+        name: "studio.ninthhouse.justifier/mic",
+        binaryMessenger: controller.binaryMessenger
+      )
+      channel.setMethodCallHandler { [weak self] call, result in
+        if call.method == "request" {
+          self?.requestMic(result: result)
+        } else {
+          result(FlutterMethodNotImplemented)
+        }
+      }
+    }
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  private func requestMic(result: @escaping FlutterResult) {
+    switch AVAudioSession.sharedInstance().recordPermission {
+    case .granted:
+      result("granted")
+    case .denied:
+      result("permanentlyDenied")
+    default:
+      AVAudioSession.sharedInstance().requestRecordPermission { granted in
+        DispatchQueue.main.async {
+          result(granted ? "granted" : "denied")
+        }
+      }
+    }
   }
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
