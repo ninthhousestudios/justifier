@@ -37,10 +37,11 @@ typedef enum {
     WAVEFORM_LFNOISE0    = 8,
     WAVEFORM_LFNOISE1    = 9,
     WAVEFORM_LFNOISE2    = 10,
-    WAVEFORM_FM          = 11,
+    WAVEFORM_FM            = 11,
+    WAVEFORM_BOWED_STRING  = 12,
 } WaveformType;
 
-#define NUM_WAVEFORM_TYPES 12
+#define NUM_WAVEFORM_TYPES 13
 
 // Engine lifecycle
 JUSTIFIER_EXPORT int  justifier_init(int sample_rate, int buffer_size);

@@ -29,6 +29,7 @@
 #include "lfnoise1_dsp.cpp"
 #include "lfnoise2_dsp.cpp"
 #include "fm_dsp.cpp"
+#include "bowed_string_dsp.cpp"
 #include "reverb_dsp.cpp"
 #include "delay_dsp.cpp"
 #include "chorus_dsp.cpp"
@@ -81,7 +82,8 @@ static dsp* create_dsp_instance(WaveformType type) {
         case WAVEFORM_LFNOISE0:    return new Lfnoise0DSP();
         case WAVEFORM_LFNOISE1:    return new Lfnoise1DSP();
         case WAVEFORM_LFNOISE2:    return new Lfnoise2DSP();
-        case WAVEFORM_FM:          return new FmDSP();
+        case WAVEFORM_FM:            return new FmDSP();
+        case WAVEFORM_BOWED_STRING:  return new Bowed_stringDSP();
         default:
             return nullptr;
     }

@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD 17)
 # ---------------------------------------------------------------------------
 option(JUSTIFIER_REGEN_FAUST "Re-run Faust compiler to regenerate DSP C++ files" OFF)
 
-set(FAUST_DSP_FILES sine triangle saw square pulse white_noise pink_noise brown_noise lfnoise0 lfnoise1 lfnoise2 fm reverb delay chorus phaser flanger parametric_eq saturation)
+set(FAUST_DSP_FILES sine triangle saw square pulse white_noise pink_noise brown_noise lfnoise0 lfnoise1 lfnoise2 fm bowed_string reverb delay chorus phaser flanger parametric_eq saturation)
 set(FAUST_COMMITTED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/generated")
 
 if(JUSTIFIER_REGEN_FAUST)

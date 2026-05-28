@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../audio/waveform_type.dart';
 import '../drone/drone_state.dart';
 import '../settings/reference_pitch_state.dart';
 
@@ -114,10 +115,11 @@ class _VoiceCard extends ConsumerWidget {
               children: [
                 IconButton(
                   icon: Icon(
-                      voice.gateOn ? Icons.volume_up : Icons.volume_off),
+                      voice.gateOn ? Icons.pause : Icons.play_arrow),
                   color: voice.gateOn
                       ? theme.colorScheme.primary
                       : theme.colorScheme.onSurfaceVariant,
+                  tooltip: voice.gateOn ? 'Pause' : 'Resume',
                   onPressed: () => notifier.toggleGate(voice.id),
                 ),
                 const SizedBox(width: 4),
@@ -140,6 +142,8 @@ class _VoiceCard extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 4),
+            _WaveformPicker(voice: voice),
+            const SizedBox(height: 4),
             _PitchModeToggle(voice: voice),
             const SizedBox(height: 8),
             if (voice.useRatio)
@@ -151,6 +155,28 @@ class _VoiceCard extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _WaveformPicker extends ConsumerWidget {
+  const _WaveformPicker({required this.voice});
+  final DroneVoice voice;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Wrap(
+      spacing: 6,
+      children: [
+        for (final type in WaveformType.droneTypes)
+          ChoiceChip(
+            label: Text(type.label),
+            selected: voice.waveformType == type,
+            visualDensity: VisualDensity.compact,
+            onSelected: (_) =>
+                ref.read(droneProvider.notifier).setWaveform(voice.id, type),
+          ),
+      ],
     );
   }
 }

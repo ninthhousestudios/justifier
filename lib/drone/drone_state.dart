@@ -15,6 +15,7 @@ class DroneVoice {
     this.numerator = 1,
     this.denominator = 1,
     this.approximateRatio = false,
+    this.waveformType = WaveformType.sine,
   });
 
   final int id;
@@ -25,6 +26,7 @@ class DroneVoice {
   final int numerator;
   final int denominator;
   final bool approximateRatio;
+  final WaveformType waveformType;
 
   DroneVoice copyWith({
     double? frequency,
@@ -34,6 +36,7 @@ class DroneVoice {
     int? numerator,
     int? denominator,
     bool? approximateRatio,
+    WaveformType? waveformType,
   }) {
     return DroneVoice(
       id: id,
@@ -44,6 +47,7 @@ class DroneVoice {
       numerator: numerator ?? this.numerator,
       denominator: denominator ?? this.denominator,
       approximateRatio: approximateRatio ?? this.approximateRatio,
+      waveformType: waveformType ?? this.waveformType,
     );
   }
 
@@ -201,6 +205,30 @@ class DroneNotifier extends Notifier<List<DroneVoice>> {
       for (final v in state) if (v.id == id) updated else v,
     ];
   }
+
+  void setWaveform(int id, WaveformType type) {
+    _engine.setWaveform(id, type);
+    state = [
+      for (final v in state)
+        if (v.id == id) v.copyWith(waveformType: type) else v,
+    ];
+  }
+
+  void pauseAll() {
+    for (final v in state) {
+      if (v.gateOn) _engine.setGate(v.id, false);
+    }
+    state = [for (final v in state) v.copyWith(gateOn: false)];
+  }
+
+  void resumeAll() {
+    for (final v in state) {
+      if (!v.gateOn) _engine.setGate(v.id, true);
+    }
+    state = [for (final v in state) v.copyWith(gateOn: true)];
+  }
+
+  bool get allPaused => state.isNotEmpty && state.every((v) => !v.gateOn);
 
   void removeAll() {
     for (final v in state) {

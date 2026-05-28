@@ -497,7 +497,8 @@ enum NativeWaveformType {
   WAVEFORM_LFNOISE0(8),
   WAVEFORM_LFNOISE1(9),
   WAVEFORM_LFNOISE2(10),
-  WAVEFORM_FM(11);
+  WAVEFORM_FM(11),
+  WAVEFORM_BOWED_STRING(12);
 
   final int value;
   const NativeWaveformType(this.value);
@@ -515,6 +516,7 @@ enum NativeWaveformType {
     9 => WAVEFORM_LFNOISE1,
     10 => WAVEFORM_LFNOISE2,
     11 => WAVEFORM_FM,
+    12 => WAVEFORM_BOWED_STRING,
     _ => throw ArgumentError("Unknown value for NativeWaveformType: $value"),
   };
 }
