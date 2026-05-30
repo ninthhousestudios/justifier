@@ -259,6 +259,14 @@ static void apply_control_message(AudioEngine* eng, const ControlMessage* msg) {
             break;
         }
 
+        case MSG_SET_TANPURA_TONE1: {
+            if (id < 0 || id >= MAX_VOICES) break;
+            VoiceSlot* slot = &eng->voices[id];
+            if (slot->state.load() == VOICE_FREE) break;
+            faust_wrapper_set_param(slot->dsp, "tone1_ratio", msg->float_value);
+            break;
+        }
+
         case MSG_SET_MASTER_VOLUME: {
             eng->master_volume = msg->float_value;
             break;
@@ -807,6 +815,15 @@ void justifier_voice_set_mod_index(int voice_id, float index) {
     msg.type        = MSG_SET_MOD_INDEX;
     msg.voice_id    = voice_id;
     msg.float_value = index;
+    g_engine.control_queue->enqueue(msg);
+}
+
+void justifier_voice_set_tanpura_tone1(int voice_id, float ratio) {
+    if (!g_engine.running) return;
+    ControlMessage msg = {};
+    msg.type        = MSG_SET_TANPURA_TONE1;
+    msg.voice_id    = voice_id;
+    msg.float_value = ratio;
     g_engine.control_queue->enqueue(msg);
 }
 

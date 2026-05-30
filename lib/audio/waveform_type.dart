@@ -15,7 +15,8 @@ enum WaveformType {
   lfnoise1,
   lfnoise2,
   fm,
-  bowedString;
+  bowedString,
+  tanpura;
 
   /// Whether this waveform responds to pitch (frequency/detune) controls.
   bool get isPitched => switch (this) {
@@ -38,8 +39,9 @@ enum WaveformType {
     lfnoise2 => 'LFNoise2',
     fm => 'FM',
     bowedString => 'Viola',
+    tanpura => 'Tanpura',
   };
 
   /// Waveform types suitable for use as drone timbres.
-  static const droneTypes = [sine, bowedString];
+  static const droneTypes = [sine, bowedString, tanpura];
 }

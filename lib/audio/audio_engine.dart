@@ -85,6 +85,14 @@ class AudioEngine {
       _bindings.justifier_voice_set_mod_index(voiceId, index);
 
   // ---------------------------------------------------------------------------
+  // Tanpura-specific
+  // ---------------------------------------------------------------------------
+
+  /// Set the tanpura's first-tone (Pa) string ratio relative to Sa.
+  void setTanpuraTone1(int voiceId, double ratio) =>
+      _bindings.justifier_voice_set_tanpura_tone1(voiceId, ratio);
+
+  // ---------------------------------------------------------------------------
   // Filter
   // ---------------------------------------------------------------------------
 

@@ -16,6 +16,8 @@ class DroneVoice {
     this.denominator = 1,
     this.approximateRatio = false,
     this.waveformType = WaveformType.sine,
+    this.tone1Num = 3,
+    this.tone1Den = 2,
   });
 
   final int id;
@@ -28,6 +30,10 @@ class DroneVoice {
   final bool approximateRatio;
   final WaveformType waveformType;
 
+  // Tanpura first-tone (Pa) string, as a JI ratio against Sa. Default Pa = 3/2.
+  final int tone1Num;
+  final int tone1Den;
+
   DroneVoice copyWith({
     double? frequency,
     double? amplitude,
@@ -37,6 +43,8 @@ class DroneVoice {
     int? denominator,
     bool? approximateRatio,
     WaveformType? waveformType,
+    int? tone1Num,
+    int? tone1Den,
   }) {
     return DroneVoice(
       id: id,
@@ -48,10 +56,14 @@ class DroneVoice {
       denominator: denominator ?? this.denominator,
       approximateRatio: approximateRatio ?? this.approximateRatio,
       waveformType: waveformType ?? this.waveformType,
+      tone1Num: tone1Num ?? this.tone1Num,
+      tone1Den: tone1Den ?? this.tone1Den,
     );
   }
 
   double ratioHz(double refHz) => refHz * numerator / denominator;
+
+  double get tone1Ratio => tone1Num / tone1Den;
 
   String frequencyLabel(double refHz) {
     final hz = useRatio ? ratioHz(refHz) : frequency;
@@ -208,9 +220,35 @@ class DroneNotifier extends Notifier<List<DroneVoice>> {
 
   void setWaveform(int id, WaveformType type) {
     _engine.setWaveform(id, type);
+    // The freshly-swapped pool DSP starts at its param defaults; push the voice's
+    // current first-tone ratio so a tanpura reflects any earlier user change.
+    if (type == WaveformType.tanpura) {
+      final v = state.firstWhere((v) => v.id == id);
+      _engine.setTanpuraTone1(id, v.tone1Ratio);
+    }
     state = [
       for (final v in state)
         if (v.id == id) v.copyWith(waveformType: type) else v,
+    ];
+  }
+
+  void setTone1Num(int id, int n) {
+    if (n < 1) return;
+    final voice = state.firstWhere((v) => v.id == id);
+    final updated = voice.copyWith(tone1Num: n);
+    _engine.setTanpuraTone1(id, updated.tone1Ratio);
+    state = [
+      for (final v in state) if (v.id == id) updated else v,
+    ];
+  }
+
+  void setTone1Den(int id, int d) {
+    if (d < 1) return;
+    final voice = state.firstWhere((v) => v.id == id);
+    final updated = voice.copyWith(tone1Den: d);
+    _engine.setTanpuraTone1(id, updated.tone1Ratio);
+    state = [
+      for (final v in state) if (v.id == id) updated else v,
     ];
   }
 

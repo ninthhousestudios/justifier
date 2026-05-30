@@ -39,9 +39,10 @@ typedef enum {
     WAVEFORM_LFNOISE2    = 10,
     WAVEFORM_FM            = 11,
     WAVEFORM_BOWED_STRING  = 12,
+    WAVEFORM_TANPURA       = 13,
 } WaveformType;
 
-#define NUM_WAVEFORM_TYPES 13
+#define NUM_WAVEFORM_TYPES 14
 
 // Engine lifecycle
 JUSTIFIER_EXPORT int  justifier_init(int sample_rate, int buffer_size);
@@ -59,6 +60,9 @@ JUSTIFIER_EXPORT void justifier_voice_set_waveform(int voice_id, WaveformType ty
 // FM-specific
 JUSTIFIER_EXPORT void justifier_voice_set_mod_ratio(int voice_id, float ratio);
 JUSTIFIER_EXPORT void justifier_voice_set_mod_index(int voice_id, float index);
+
+// Tanpura-specific (the first-tone string ratio vs. Sa)
+JUSTIFIER_EXPORT void justifier_voice_set_tanpura_tone1(int voice_id, float ratio);
 
 // Per-voice filter
 JUSTIFIER_EXPORT void justifier_voice_set_filter_type(int voice_id, int type);

@@ -152,8 +152,105 @@ class _VoiceCard extends ConsumerWidget {
               _FrequencyRow(voice: voice),
             const SizedBox(height: 4),
             _AmplitudeRow(voice: voice),
+            if (voice.waveformType == WaveformType.tanpura) ...[
+              const SizedBox(height: 8),
+              _TanpuraSection(voice: voice),
+            ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Tanpura-specific knobs, shown when the voice's timbre is Tanpura.
+/// For now: just the first-tone (Pa) string ratio vs. Sa.
+class _TanpuraSection extends ConsumerWidget {
+  const _TanpuraSection({required this.voice});
+  final DroneVoice voice;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final notifier = ref.read(droneProvider.notifier);
+    final refHz = ref.watch(referencePitchProvider).hz;
+    final saHz = voice.ratioHz(refHz); // the voice's Sa
+    final tone1Hz = saHz * voice.tone1Ratio;
+
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('TANPURA',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.primary,
+                letterSpacing: 1.2,
+              )),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              SizedBox(
+                width: 64,
+                child: Text('First tone',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant)),
+              ),
+              const Spacer(),
+              _StepButton(
+                icon: Icons.remove,
+                onPressed: () =>
+                    notifier.setTone1Num(voice.id, voice.tone1Num - 1),
+              ),
+              SizedBox(
+                width: 32,
+                child: Text('${voice.tone1Num}',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontFamily: 'Source Code Pro')),
+              ),
+              _StepButton(
+                icon: Icons.add,
+                onPressed: () =>
+                    notifier.setTone1Num(voice.id, voice.tone1Num + 1),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text('/',
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+              ),
+              _StepButton(
+                icon: Icons.remove,
+                onPressed: () =>
+                    notifier.setTone1Den(voice.id, voice.tone1Den - 1),
+              ),
+              SizedBox(
+                width: 32,
+                child: Text('${voice.tone1Den}',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontFamily: 'Source Code Pro')),
+              ),
+              _StepButton(
+                icon: Icons.add,
+                onPressed: () =>
+                    notifier.setTone1Den(voice.id, voice.tone1Den + 1),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '${tone1Hz.toStringAsFixed(1)} Hz  ·  Sa ${saHz.toStringAsFixed(1)} Hz',
+            style: theme.textTheme.labelSmall
+                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          ),
+        ],
       ),
     );
   }
