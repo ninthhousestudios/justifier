@@ -283,11 +283,10 @@ class Lfnoise0DSP : public dsp {
 			iRec9[0] = 1103515245 * iRec9[1] + 12345;
 			fRec5[0] = fRec5[1] * static_cast<float>(1 - iTemp7) + 4.656613e-10f * static_cast<float>(iRec9[0]) * static_cast<float>(iTemp7);
 			fRec4[0] = fRec5[0] - (fRec4[2] * ((fTemp2 - fTemp1) / fTemp0 + 1.0f) + 2.0f * fRec4[1] * (1.0f - 1.0f / Lfnoise0DSP_faustpower2_f(fTemp0))) / fTemp3;
-			float fTemp8 = fRec4[2] + fRec4[0] + 2.0f * fRec4[1];
-			float fTemp9 = fTemp0 * fTemp3;
-			float fTemp10 = fRec4[0] - fRec4[2];
+			float fTemp8 = (fRec4[2] + fRec4[0] + 2.0f * fRec4[1]) / fTemp3;
+			float fTemp9 = (fRec4[0] - fRec4[2]) / (fTemp0 * fTemp3);
 			fRec10[0] = fSlow15 + fConst2 * fRec10[1];
-			output0[i0] = static_cast<FAUSTFLOAT>(fRec10[0] * ((iSlow8) ? ((iSlow14) ? fRec5[0] * (1.0f - fTemp10 / fTemp9) : fRec5[0] * fTemp10 / fTemp9) : ((iSlow9) ? -(fRec5[0] * (fTemp8 / fTemp3 - fRec5[0])) : fRec5[0] * fTemp8 / fTemp3)) * std::max<float>(0.0f, std::min<float>(fSlow4 * fRec1[0], std::max<float>(fSlow6 * (fSlow3 - fRec1[0]) + 1.0f, fSlow5)) * (1.0f - fSlow2 * static_cast<float>(iRec0[0]))));
+			output0[i0] = static_cast<FAUSTFLOAT>(fRec10[0] * ((iSlow8) ? ((iSlow14) ? fRec5[0] - fTemp9 : fTemp9) : ((iSlow9) ? fRec5[0] - fTemp8 : fTemp8)) * std::max<float>(0.0f, std::min<float>(fSlow4 * fRec1[0], std::max<float>(fSlow6 * (fSlow3 - fRec1[0]) + 1.0f, fSlow5)) * (1.0f - fSlow2 * static_cast<float>(iRec0[0]))));
 			iVec0[1] = iVec0[0];
 			fVec1[1] = fVec1[0];
 			iRec0[1] = iRec0[0];

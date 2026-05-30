@@ -71,7 +71,6 @@ class TriangleDSP : public dsp {
 	float fRec5[2];
 	float fConst7;
 	float fRec4[3];
-	float fConst8;
 	FAUSTFLOAT fEntry10;
 	float fRec8[2];
 	
@@ -161,7 +160,6 @@ class TriangleDSP : public dsp {
 		fConst5 = 0.5f * fConst0;
 		fConst6 = 0.25f * fConst0;
 		fConst7 = 4.0f / fConst0;
-		fConst8 = 16.0f / fConst0;
 	}
 	
 	virtual void instanceResetUserInterface() {
@@ -273,10 +271,8 @@ class TriangleDSP : public dsp {
 		float fSlow12 = fConst1 * static_cast<float>(fEntry8);
 		float fSlow13 = std::pow(2.0f, 0.00083333335f * static_cast<float>(fEntry9));
 		float fSlow14 = fConst7 * fSlow13;
-		float fSlow15 = fConst4 * fSlow13;
-		float fSlow16 = fConst8 * fSlow13;
-		int iSlow17 = iSlow7 >= 3;
-		float fSlow18 = fConst1 * static_cast<float>(fEntry10);
+		int iSlow15 = iSlow7 >= 3;
+		float fSlow16 = fConst1 * static_cast<float>(fEntry10);
 		for (int i0 = 0; i0 < count; i0 = i0 + 1) {
 			iVec0[0] = 1;
 			fVec1[0] = fSlow0;
@@ -301,13 +297,12 @@ class TriangleDSP : public dsp {
 			int iTemp10 = static_cast<int>(fTemp9);
 			float fTemp11 = std::floor(fTemp9);
 			fRec5[0] = 0.999f * fRec5[1] + fConst6 * (fTemp8 - fVec3[(IOTA0 - iTemp10) & 4095] * (fTemp11 + (1.0f - fTemp9)) - (fTemp9 - fTemp11) * fVec3[(IOTA0 - (iTemp10 + 1)) & 4095]);
-			float fTemp12 = fRec6[0] * fRec5[0];
-			fRec4[0] = fSlow14 * fTemp12 - (fRec4[2] * ((fTemp2 - fTemp1) / fTemp0 + 1.0f) + 2.0f * fRec4[1] * (1.0f - 1.0f / TriangleDSP_faustpower2_f(fTemp0))) / fTemp3;
-			float fTemp13 = 4.0f * fRec4[0] + 8.0f * fRec4[1] + 4.0f * fRec4[2];
-			float fTemp14 = fTemp0 * fTemp3;
-			float fTemp15 = fRec4[0] - fRec4[2];
-			fRec8[0] = fSlow18 + fConst2 * fRec8[1];
-			output0[i0] = static_cast<FAUSTFLOAT>(fRec8[0] * ((iSlow8) ? ((iSlow17) ? fSlow14 * fTemp12 * (1.0f - fTemp15 / fTemp14) : fSlow14 * (fTemp12 * fTemp15 / fTemp14)) : ((iSlow9) ? fSlow15 * fTemp12 * (fSlow16 * fTemp12 - fTemp13 / fTemp3) : fSlow15 * (fTemp12 * fTemp13 / fTemp3))) * std::max<float>(0.0f, std::min<float>(fSlow4 * fRec1[0], std::max<float>(fSlow6 * (fSlow3 - fRec1[0]) + 1.0f, fSlow5)) * (1.0f - fSlow2 * static_cast<float>(iRec0[0]))));
+			float fTemp12 = fSlow14 * fRec6[0] * fRec5[0];
+			fRec4[0] = fTemp12 - (fRec4[2] * ((fTemp2 - fTemp1) / fTemp0 + 1.0f) + 2.0f * fRec4[1] * (1.0f - 1.0f / TriangleDSP_faustpower2_f(fTemp0))) / fTemp3;
+			float fTemp13 = (fRec4[2] + fRec4[0] + 2.0f * fRec4[1]) / fTemp3;
+			float fTemp14 = (fRec4[0] - fRec4[2]) / (fTemp0 * fTemp3);
+			fRec8[0] = fSlow16 + fConst2 * fRec8[1];
+			output0[i0] = static_cast<FAUSTFLOAT>(fRec8[0] * ((iSlow8) ? ((iSlow15) ? fTemp12 - fTemp14 : fTemp14) : ((iSlow9) ? fTemp12 - fTemp13 : fTemp13)) * std::max<float>(0.0f, std::min<float>(fSlow4 * fRec1[0], std::max<float>(fSlow6 * (fSlow3 - fRec1[0]) + 1.0f, fSlow5)) * (1.0f - fSlow2 * static_cast<float>(iRec0[0]))));
 			iVec0[1] = iVec0[0];
 			fVec1[1] = fVec1[0];
 			iRec0[1] = iRec0[0];

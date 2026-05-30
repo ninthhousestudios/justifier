@@ -69,7 +69,6 @@ class SquareDSP : public dsp {
 	float fConst5;
 	float fConst6;
 	float fRec4[3];
-	float fConst7;
 	FAUSTFLOAT fEntry10;
 	float fRec7[2];
 	
@@ -155,7 +154,6 @@ class SquareDSP : public dsp {
 		fConst4 = 1.0f / fConst0;
 		fConst5 = 0.5f * fConst0;
 		fConst6 = 0.25f * fConst0;
-		fConst7 = 0.0625f * fConst0;
 	}
 	
 	virtual void instanceResetUserInterface() {
@@ -288,13 +286,12 @@ class SquareDSP : public dsp {
 			float fTemp9 = std::max<float>(0.0f, std::min<float>(2047.0f, fConst5 / fTemp4));
 			int iTemp10 = static_cast<int>(fTemp9);
 			float fTemp11 = std::floor(fTemp9);
-			float fTemp12 = fTemp8 - fVec3[(IOTA0 - iTemp10) & 4095] * (fTemp11 + (1.0f - fTemp9)) - (fTemp9 - fTemp11) * fVec3[(IOTA0 - (iTemp10 + 1)) & 4095];
-			fRec4[0] = fConst6 * fTemp12 - (fRec4[2] * ((fTemp2 - fTemp1) / fTemp0 + 1.0f) + 2.0f * fRec4[1] * (1.0f - 1.0f / SquareDSP_faustpower2_f(fTemp0))) / fTemp3;
-			float fTemp13 = 0.25f * fRec4[0] + 0.5f * fRec4[1] + 0.25f * fRec4[2];
-			float fTemp14 = fTemp0 * fTemp3;
-			float fTemp15 = fRec4[0] - fRec4[2];
+			float fTemp12 = fConst6 * (fTemp8 - fVec3[(IOTA0 - iTemp10) & 4095] * (fTemp11 + (1.0f - fTemp9)) - (fTemp9 - fTemp11) * fVec3[(IOTA0 - (iTemp10 + 1)) & 4095]);
+			fRec4[0] = fTemp12 - (fRec4[2] * ((fTemp2 - fTemp1) / fTemp0 + 1.0f) + 2.0f * fRec4[1] * (1.0f - 1.0f / SquareDSP_faustpower2_f(fTemp0))) / fTemp3;
+			float fTemp13 = (fRec4[2] + fRec4[0] + 2.0f * fRec4[1]) / fTemp3;
+			float fTemp14 = (fRec4[0] - fRec4[2]) / (fTemp0 * fTemp3);
 			fRec7[0] = fSlow15 + fConst2 * fRec7[1];
-			output0[i0] = static_cast<FAUSTFLOAT>(fRec7[0] * ((iSlow8) ? ((iSlow14) ? fConst6 * fTemp12 * (1.0f - fTemp15 / fTemp14) : fConst6 * (fTemp12 * fTemp15 / fTemp14)) : ((iSlow9) ? fConst0 * fTemp12 * (fConst7 * fTemp12 - fTemp13 / fTemp3) : fConst0 * (fTemp12 * fTemp13 / fTemp3))) * std::max<float>(0.0f, std::min<float>(fSlow4 * fRec1[0], std::max<float>(fSlow6 * (fSlow3 - fRec1[0]) + 1.0f, fSlow5)) * (1.0f - fSlow2 * static_cast<float>(iRec0[0]))));
+			output0[i0] = static_cast<FAUSTFLOAT>(fRec7[0] * ((iSlow8) ? ((iSlow14) ? fTemp12 - fTemp14 : fTemp14) : ((iSlow9) ? fTemp12 - fTemp13 : fTemp13)) * std::max<float>(0.0f, std::min<float>(fSlow4 * fRec1[0], std::max<float>(fSlow6 * (fSlow3 - fRec1[0]) + 1.0f, fSlow5)) * (1.0f - fSlow2 * static_cast<float>(iRec0[0]))));
 			iVec0[1] = iVec0[0];
 			fVec1[1] = fVec1[0];
 			iRec0[1] = iRec0[0];

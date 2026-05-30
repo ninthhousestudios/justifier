@@ -16,8 +16,8 @@ with {
     filter_res    = nentry("filter_res", 0.0, 0.0, 1.0, 0.01) : si.smoo;
     filter_q      = 0.707 + filter_res * 19.293;
 
-    lp = fi.resonlp(filter_cutoff, filter_q);
-    hp = fi.resonhp(filter_cutoff, filter_q);
-    bp = fi.resonbp(filter_cutoff, filter_q);
-    nt = _ <: _, fi.resonbp(filter_cutoff, filter_q) :> -;
+    lp = fi.resonlp(filter_cutoff, filter_q, 1.0);
+    hp = fi.resonhp(filter_cutoff, filter_q, 1.0);
+    bp = fi.resonbp(filter_cutoff, filter_q, 1.0);
+    nt = _ <: _, fi.resonbp(filter_cutoff, filter_q, 1.0) :> -;
 };

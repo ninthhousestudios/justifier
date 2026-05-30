@@ -59,7 +59,7 @@ class Lfnoise2DSP : public dsp {
 	FAUSTFLOAT fEntry7;
 	float fRec3[2];
 	FAUSTFLOAT fEntry8;
-	float fRec4[2];
+	float fRec5[2];
 	FAUSTFLOAT fEntry9;
 	float fConst4;
 	float fRec13[2];
@@ -72,7 +72,7 @@ class Lfnoise2DSP : public dsp {
 	float fRec8[2];
 	float fRec7[2];
 	float fRec6[3];
-	float fRec5[3];
+	float fRec4[3];
 	FAUSTFLOAT fEntry10;
 	float fRec16[2];
 	
@@ -203,7 +203,7 @@ class Lfnoise2DSP : public dsp {
 			fRec3[l5] = 0.0f;
 		}
 		for (int l6 = 0; l6 < 2; l6 = l6 + 1) {
-			fRec4[l6] = 0.0f;
+			fRec5[l6] = 0.0f;
 		}
 		for (int l7 = 0; l7 < 2; l7 = l7 + 1) {
 			fRec13[l7] = 0.0f;
@@ -236,7 +236,7 @@ class Lfnoise2DSP : public dsp {
 			fRec6[l16] = 0.0f;
 		}
 		for (int l17 = 0; l17 < 3; l17 = l17 + 1) {
-			fRec5[l17] = 0.0f;
+			fRec4[l17] = 0.0f;
 		}
 		for (int l18 = 0; l18 < 2; l18 = l18 + 1) {
 			fRec16[l18] = 0.0f;
@@ -309,12 +309,12 @@ class Lfnoise2DSP : public dsp {
 			float fTemp1 = 1.0f / (19.293f * fRec3[0] + 0.707f);
 			float fTemp2 = 1.0f / fTemp0;
 			float fTemp3 = (fTemp2 + fTemp1) / fTemp0 + 1.0f;
-			fRec4[0] = fSlow12 + fConst2 * fRec4[1];
-			float fTemp4 = fSlow14 * fRec4[0];
+			fRec5[0] = fSlow12 + fConst2 * fRec5[1];
+			float fTemp4 = fSlow14 * fRec5[0];
 			float fTemp5 = std::tan(fTemp4);
 			float fTemp6 = 1.0f / fTemp5;
 			float fTemp7 = (fTemp6 + 1.4142135f) / fTemp5 + 1.0f;
-			float fTemp8 = 1.0f / std::tan(fSlow15 * fRec4[0]);
+			float fTemp8 = 1.0f / std::tan(fSlow15 * fRec5[0]);
 			float fTemp9 = fTemp8 + 1.0f;
 			float fTemp10 = std::cos(fTemp4);
 			float fTemp11 = std::sin(fTemp4);
@@ -330,20 +330,19 @@ class Lfnoise2DSP : public dsp {
 			fRec8[0] = -((fTemp13 * fRec8[1] - (fRec9[0] + fRec9[1])) / fTemp9);
 			fRec7[0] = -((fRec7[1] * fTemp13 - (fRec8[0] + fRec8[1])) / fTemp9);
 			fRec6[0] = fRec7[0] - (fRec6[2] * ((fTemp6 + -1.4142135f) / fTemp5 + 1.0f) + 2.0f * fRec6[1] * (1.0f - 1.0f / Lfnoise2DSP_faustpower2_f(fTemp5))) / fTemp7;
-			float fTemp14 = fRec6[2] + fRec6[0] + 2.0f * fRec6[1];
-			float fTemp15 = fTemp14 / fTemp7;
-			fRec5[0] = fTemp15 - (fRec5[2] * ((fTemp2 - fTemp1) / fTemp0 + 1.0f) + 2.0f * fRec5[1] * (1.0f - 1.0f / Lfnoise2DSP_faustpower2_f(fTemp0))) / fTemp3;
-			float fTemp16 = fRec5[2] + fRec5[0] + 2.0f * fRec5[1];
-			float fTemp17 = fRec5[0] - fRec5[2];
+			float fTemp14 = (fRec6[2] + fRec6[0] + 2.0f * fRec6[1]) / fTemp7;
+			fRec4[0] = fTemp14 - (fRec4[2] * ((fTemp2 - fTemp1) / fTemp0 + 1.0f) + 2.0f * fRec4[1] * (1.0f - 1.0f / Lfnoise2DSP_faustpower2_f(fTemp0))) / fTemp3;
+			float fTemp15 = (fRec4[2] + fRec4[0] + 2.0f * fRec4[1]) / fTemp3;
+			float fTemp16 = (fRec4[0] - fRec4[2]) / (fTemp0 * fTemp3);
 			fRec16[0] = fSlow17 + fConst2 * fRec16[1];
-			output0[i0] = static_cast<FAUSTFLOAT>(fRec16[0] * ((iSlow8) ? ((iSlow16) ? fTemp14 * (1.0f - fTemp17 / (fTemp0 * fTemp3)) / fTemp7 : fTemp14 * fTemp17 / (fTemp7 * fTemp0 * fTemp3)) : ((iSlow9) ? -(fTemp14 * (fTemp16 / fTemp3 - fTemp15) / fTemp7) : fTemp14 * fTemp16 / (fTemp7 * fTemp3))) * std::max<float>(0.0f, std::min<float>(fSlow4 * fRec1[0], std::max<float>(fSlow6 * (fSlow3 - fRec1[0]) + 1.0f, fSlow5)) * (1.0f - fSlow2 * static_cast<float>(iRec0[0]))));
+			output0[i0] = static_cast<FAUSTFLOAT>(fRec16[0] * ((iSlow8) ? ((iSlow16) ? fTemp14 - fTemp16 : fTemp16) : ((iSlow9) ? fTemp14 - fTemp15 : fTemp15)) * std::max<float>(0.0f, std::min<float>(fSlow4 * fRec1[0], std::max<float>(fSlow6 * (fSlow3 - fRec1[0]) + 1.0f, fSlow5)) * (1.0f - fSlow2 * static_cast<float>(iRec0[0]))));
 			iVec0[1] = iVec0[0];
 			fVec1[1] = fVec1[0];
 			iRec0[1] = iRec0[0];
 			fRec1[1] = fRec1[0];
 			fRec2[1] = fRec2[0];
 			fRec3[1] = fRec3[0];
-			fRec4[1] = fRec4[0];
+			fRec5[1] = fRec5[0];
 			fRec13[1] = fRec13[0];
 			fRec14[1] = fRec14[0];
 			iRec15[1] = iRec15[0];
@@ -355,8 +354,8 @@ class Lfnoise2DSP : public dsp {
 			fRec7[1] = fRec7[0];
 			fRec6[2] = fRec6[1];
 			fRec6[1] = fRec6[0];
-			fRec5[2] = fRec5[1];
-			fRec5[1] = fRec5[0];
+			fRec4[2] = fRec4[1];
+			fRec4[1] = fRec4[0];
 			fRec16[1] = fRec16[0];
 		}
 	}

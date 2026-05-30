@@ -308,11 +308,10 @@ class SineDSP : public dsp {
 			fRec6[0] = fTemp4 - std::floor(fTemp4);
 			float fTemp5 = ftbl0SineDSPSIG0[std::max<int>(0, std::min<int>(static_cast<int>(65536.0f * fRec6[0]), 65535))];
 			fRec4[0] = fTemp5 - (fRec4[2] * ((fTemp2 - fTemp1) / fTemp0 + 1.0f) + 2.0f * fRec4[1] * (1.0f - 1.0f / SineDSP_faustpower2_f(fTemp0))) / fTemp3;
-			float fTemp6 = fRec4[2] + fRec4[0] + 2.0f * fRec4[1];
-			float fTemp7 = fTemp0 * fTemp3;
-			float fTemp8 = fRec4[0] - fRec4[2];
+			float fTemp6 = (fRec4[2] + fRec4[0] + 2.0f * fRec4[1]) / fTemp3;
+			float fTemp7 = (fRec4[0] - fRec4[2]) / (fTemp0 * fTemp3);
 			fRec8[0] = fSlow15 + fConst2 * fRec8[1];
-			output0[i0] = static_cast<FAUSTFLOAT>(fRec8[0] * ((iSlow8) ? ((iSlow14) ? fTemp5 * (1.0f - fTemp8 / fTemp7) : fTemp5 * fTemp8 / fTemp7) : ((iSlow9) ? -(fTemp5 * (fTemp6 / fTemp3 - fTemp5)) : fTemp5 * fTemp6 / fTemp3)) * std::max<float>(0.0f, std::min<float>(fSlow4 * fRec1[0], std::max<float>(fSlow6 * (fSlow3 - fRec1[0]) + 1.0f, fSlow5)) * (1.0f - fSlow2 * static_cast<float>(iRec0[0]))));
+			output0[i0] = static_cast<FAUSTFLOAT>(fRec8[0] * ((iSlow8) ? ((iSlow14) ? fTemp5 - fTemp7 : fTemp7) : ((iSlow9) ? fTemp5 - fTemp6 : fTemp6)) * std::max<float>(0.0f, std::min<float>(fSlow4 * fRec1[0], std::max<float>(fSlow6 * (fSlow3 - fRec1[0]) + 1.0f, fSlow5)) * (1.0f - fSlow2 * static_cast<float>(iRec0[0]))));
 			iVec0[1] = iVec0[0];
 			fVec1[1] = fVec1[0];
 			iRec0[1] = iRec0[0];

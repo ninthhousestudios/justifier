@@ -246,11 +246,10 @@ class Pink_noiseDSP : public dsp {
 			float fTemp4 = 0.095993534f * fRec5[1] + 0.004408786f * fRec5[3];
 			float fTemp5 = 0.049922034f * fRec5[0] + 0.0506127f * fRec5[2];
 			fRec4[0] = fTemp5 - (fTemp4 + (fRec4[2] * ((fTemp2 - fTemp1) / fTemp0 + 1.0f) + 2.0f * fRec4[1] * (1.0f - 1.0f / Pink_noiseDSP_faustpower2_f(fTemp0))) / fTemp3);
-			float fTemp6 = fRec4[2] + fRec4[0] + 2.0f * fRec4[1];
-			float fTemp7 = fTemp5 - fTemp4;
-			float fTemp8 = fTemp7 * (fRec4[0] - fRec4[2]) / (fTemp0 * fTemp3);
+			float fTemp6 = (fRec4[2] + fRec4[0] + 2.0f * fRec4[1]) / fTemp3;
+			float fTemp7 = (fRec4[0] - fRec4[2]) / (fTemp0 * fTemp3);
 			fRec7[0] = fSlow13 + fConst2 * fRec7[1];
-			output0[i0] = static_cast<FAUSTFLOAT>(fRec7[0] * ((iSlow8) ? ((iSlow12) ? fTemp5 - (fTemp4 + fTemp8) : fTemp8) : ((iSlow9) ? -(fTemp7 * (fTemp6 / fTemp3 - fTemp7)) : fTemp7 * fTemp6 / fTemp3)) * std::max<float>(0.0f, std::min<float>(fSlow4 * fRec1[0], std::max<float>(fSlow6 * (fSlow3 - fRec1[0]) + 1.0f, fSlow5)) * (1.0f - fSlow2 * static_cast<float>(iRec0[0]))));
+			output0[i0] = static_cast<FAUSTFLOAT>(fRec7[0] * ((iSlow8) ? ((iSlow12) ? fTemp5 - (fTemp4 + fTemp7) : fTemp7) : ((iSlow9) ? fTemp5 - (fTemp4 + fTemp6) : fTemp6)) * std::max<float>(0.0f, std::min<float>(fSlow4 * fRec1[0], std::max<float>(fSlow6 * (fSlow3 - fRec1[0]) + 1.0f, fSlow5)) * (1.0f - fSlow2 * static_cast<float>(iRec0[0]))));
 			fVec0[1] = fVec0[0];
 			iRec0[1] = iRec0[0];
 			fRec1[1] = fRec1[0];
